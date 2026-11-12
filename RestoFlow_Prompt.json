@@ -1,0 +1,882 @@
+{
+  "metadata": {
+    "name": "RestoFlow - Complete Restaurant Management and POS System",
+    "version": "1.0.0",
+    "language": "id-ID",
+    "output_format": "json",
+    "intended_agent": "GitHub Copilot Agent Mode / OpenAI Codex",
+    "project_type": "Full-stack Java OOP responsive web application",
+    "source_database_file": "DATABASE RESTORAN(1).sql"
+  },
+  "agent_role": {
+    "identity": "Act as a senior Java full-stack engineer, software architect, PostgreSQL/Supabase engineer, UI/UX designer, and QA engineer.",
+    "mission": "Inspect the existing repository and the complete supplied SQL file, then implement a complete, usable, production-minded restaurant management and point-of-sale application named RestoFlow. Do not stop at mockups, static screens, pseudocode, or a partial scaffold. Build, connect, test, and document the application.",
+    "working_rules": [
+      "Analyze the existing repository before changing anything. Preserve useful existing code and conventions.",
+      "Do not assume files, schemas, environment variables, or integrations exist. Verify them.",
+      "Use the supplied DATABASE RESTORAN(1).sql as the authoritative source for the original schema and seed records.",
+      "Never silently invent, omit, rewrite, or replace source database records. Preserve their actual values.",
+      "You may add related features and database structures when necessary, but every added feature must have a clear relationship to the restaurant workflow or be calculated from persisted database data.",
+      "Do not create fake production records or hardcode dashboard totals, menu items, staff, transactions, ratings, or chart values.",
+      "If a requirement conflicts with the source schema, document the conflict and implement a safe, explicit migration instead of silently changing meaning.",
+      "Make reasonable implementation decisions autonomously. Ask a question only when a genuine blocker cannot be resolved safely from the repository or source file.",
+      "Do not claim completion while build, database integration, or essential CRUD flows are broken."
+    ]
+  },
+  "product": {
+    "application_name": "RestoFlow",
+    "description": "A complete restaurant management and point-of-sale system covering dashboard analytics, menu and table management, order processing, kitchen workflow, payments, receipts, staff, delivery, customer reviews, and reports.",
+    "primary_goal": "Provide one consistent application where the supplied SQL dataset is migrated to Supabase and every displayed or modified business record is read from or written to the same Supabase database.",
+    "platform": "Responsive browser-based application for desktop, laptop, tablet, and mobile phone.",
+    "ui_implementation": "Build the user interface in Java using Vaadin. Do not use Java Swing because the application must run responsively in mobile browsers.",
+    "architecture": "Java OOP application using Spring Boot and Vaadin, with Supabase PostgreSQL as the persistent database and Supabase Auth for authentication.",
+    "locale": "Bahasa Indonesia",
+    "currency": "IDR",
+    "timezone": "Asia/Jakarta",
+    "date_format": "dd MMM yyyy",
+    "datetime_format": "dd MMM yyyy, HH:mm",
+    "number_format": "Indonesian locale"
+  },
+  "technology_stack": {
+    "language": "Java 17 or newer LTS. Use Java 21 if the installed environment and dependency compatibility support it. Do not target Java 8 because the selected modern Spring Boot and Vaadin stack requires a newer Java runtime.",
+    "build_tool": "Maven",
+    "backend": "Spring Boot",
+    "java_ui_framework": "Vaadin Flow",
+    "database": "Supabase PostgreSQL",
+    "database_access": "Supabase REST API (PostgREST) over HTTPS from the Java server. Do not expose database credentials in browser code. Use JDBC only for local development or migration utilities when explicitly justified; the deployed application must use a secure server-side integration.",
+    "authentication": "Supabase Auth email/password through its HTTPS Auth API",
+    "charts": "Use a Vaadin-compatible chart component or a maintained chart library compatible with the selected Vaadin version.",
+    "testing": [
+      "JUnit 5",
+      "Mockito",
+      "Spring Boot Test",
+      "Testcontainers or an isolated test database where practical",
+      "HTTP/API integration tests"
+    ],
+    "deployment": "Document deployment to a Java-compatible hosting platform and Supabase. Do not assume a specific hosting provider."
+  },
+  "configuration_placeholders": {
+    "file": ".env.example",
+    "variables": {
+      "SUPABASE_URL": "https://YOUR_PROJECT_ID.supabase.co",
+      "SUPABASE_ANON_KEY": "YOUR_SUPABASE_ANON_PUBLIC_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY": "YOUR_SUPABASE_SERVICE_ROLE_KEY_ONLY_IF_REQUIRED_FOR_TRUSTED_SERVER_SIDE_ADMIN_TASKS",
+      "APP_BASE_URL": "http://localhost:8080",
+      "APP_TIMEZONE": "Asia/Jakarta"
+    },
+    "security_rules": [
+      "Never put real credentials in source code, committed files, logs, screenshots, or frontend/browser assets.",
+      "SUPABASE_URL and the anon key may be configured on the server. Never expose the service-role key to Vaadin client-side code or the browser.",
+      "Prefer user JWT plus anon key for normal data operations so Supabase Row Level Security remains effective.",
+      "If a service-role key is needed for a trusted administrative operation, isolate it in a server-only component, restrict its use, and document why it is required.",
+      "Read configuration from environment variables or an ignored local .env file.",
+      "Create .env.example with placeholders only and ensure .env is included in .gitignore.",
+      "Fail safely with a clear configuration message when required credentials are missing."
+    ]
+  },
+  "design_system": {
+    "visual_direction": "Minimalism, clean editorial layout, restrained, spacious, precise, and professional. Avoid visual clutter, excessive gradients, decorative illustrations, and unnecessary animation.",
+    "colors": {
+      "primary": "#EDEDED",
+      "secondary": "#C9C9CA",
+      "background": "#F7F7F7",
+      "surface": "#FFFFFF",
+      "surface_muted": "#E5E5E5",
+      "text_primary": "#202020",
+      "text_secondary": "#666666",
+      "border": "#D8D8D8",
+      "success": "#287A52",
+      "warning": "#B7791F",
+      "danger": "#B84040",
+      "info": "#426B91",
+      "note": "The two requested primary colors (#EDEDED and #C9C9CA) must dominate the interface. Use semantic colors only for status and feedback, sparingly. Maintain WCAG AA contrast for text and controls."
+    },
+    "typography": {
+      "heading": "Rubik",
+      "secondary": "PT Serif",
+      "body_and_form_input": "Poppins",
+      "implementation": "Load fonts from a reliable font provider or self-host them. Provide sensible sans-serif and serif fallbacks. Use Rubik for page titles and prominent headings, PT Serif for selected secondary editorial text or supporting emphasis, and Poppins for body text, labels, forms, tables, and controls."
+    },
+    "layout": {
+      "system": "CSS Grid first, with Flexbox for local alignment where appropriate.",
+      "desktop": "Persistent left sidebar, top application bar, and a fluid main content grid.",
+      "laptop": "Compact sidebar and responsive content columns without horizontal overflow.",
+      "tablet": "Collapsible navigation, adaptive two-column or one-column grids, touch-friendly controls.",
+      "mobile": "Single-column content, compact header, drawer or bottom navigation, stacked cards, horizontally scrollable data tables only when unavoidable, and large touch targets.",
+      "breakpoints": {
+        "mobile": "up to 767px",
+        "tablet": "768px to 1023px",
+        "laptop": "1024px to 1439px",
+        "desktop": "1440px and above"
+      },
+      "rules": [
+        "Use CSS Grid for dashboards, menu cards, forms, analytics panels, and responsive page composition.",
+        "Avoid fixed widths that break on smaller screens.",
+        "Do not let charts, tables, dialogs, or forms overflow the viewport.",
+        "Keep primary actions visible and reachable on touch devices.",
+        "Use consistent spacing, border radii, subtle borders, and restrained shadows.",
+        "Support keyboard navigation, visible focus states, semantic labels, and accessible dialogs."
+      ]
+    }
+  },
+  "source_database": {
+    "file": "DATABASE RESTORAN(1).sql",
+    "original_schema": {
+      "tables": {
+        "customer": {
+          "columns": [
+            "id_customer",
+            "qr_meja",
+            "nomor_meja"
+          ],
+          "meaning": "This table represents restaurant table identities and QR codes, not personal customer profiles. Label the corresponding UI module as Meja, not Customer."
+        },
+        "menu": {
+          "columns": [
+            "id_menu",
+            "nama_menu",
+            "deskripsi_menu",
+            "harga_satuan"
+          ]
+        },
+        "staff": {
+          "columns": [
+            "id_staff",
+            "nama_staff",
+            "nama_depan",
+            "nama_belakang"
+          ]
+        },
+        "staff_kitchen": {
+          "columns": [
+            "id_staff"
+          ],
+          "meaning": "Subtype/role membership for kitchen staff; references staff."
+        },
+        "kurir": {
+          "columns": [
+            "id_kurir",
+            "id_staff"
+          ],
+          "meaning": "Courier records linked to staff."
+        },
+        "ulasan": {
+          "columns": [
+            "id_ulasan",
+            "id_kurir",
+            "tanggal_rating",
+            "ulasan",
+            "rating"
+          ],
+          "constraints": [
+            "rating must be between 1 and 5"
+          ]
+        },
+        "pelayan": {
+          "columns": [
+            "id_pelayan",
+            "nama_depan",
+            "nama_belakang"
+          ],
+          "meaning": "Waiter records use their own string ID and are not directly a subtype of staff in the original schema."
+        },
+        "pembayaran": {
+          "columns": [
+            "id_pembayaran",
+            "total_harga",
+            "pay_method",
+            "status_pembayaran"
+          ]
+        },
+        "pemesanan": {
+          "columns": [
+            "id_pemesanan",
+            "id_customer",
+            "id_pembayaran",
+            "titik_pemesanan",
+            "deskripsi_pesanan",
+            "status_pemesanan",
+            "jumlah",
+            "tanggal_pemesanan"
+          ],
+          "constraints": [
+            "id_customer references customer",
+            "id_pembayaran references pembayaran and is UNIQUE"
+          ],
+          "meaning": "jumlah is distinct from detail item quantities. Treat it as guest/person count only if validated against the supplied data and documented; do not use it as the number of menu items."
+        },
+        "detail_pemesanan": {
+          "columns": [
+            "id_pemesanan",
+            "id_menu",
+            "jumlah_item"
+          ],
+          "constraints": [
+            "composite primary key (id_pemesanan, id_menu)",
+            "references pemesanan and menu"
+          ],
+          "meaning": "Order line items and their quantities."
+        },
+        "diproses_oleh": {
+          "columns": [
+            "id_pemesanan",
+            "id_staff",
+            "id_pelayan"
+          ],
+          "constraints": [
+            "references pemesanan, staff_kitchen, and pelayan"
+          ]
+        },
+        "nota": {
+          "columns": [
+            "id_nota",
+            "id_pembayaran",
+            "nomor_antrian",
+            "list_menu"
+          ],
+          "meaning": "Receipt/queue information. The canonical item details must come from detail_pemesanan joined with menu; list_menu is a denormalized legacy text field and must not become the authoritative source for order lines."
+        }
+      },
+      "relationships": [
+        "customer 1-to-many pemesanan",
+        "pembayaran 1-to-1 pemesanan in the original schema because pemesanan.id_pembayaran is UNIQUE",
+        "pemesanan 1-to-many detail_pemesanan",
+        "menu 1-to-many detail_pemesanan",
+        "staff 1-to-0/1 staff_kitchen",
+        "staff 1-to-0/1 kurir",
+        "kurir 1-to-many ulasan",
+        "pemesanan many-to-many staff_kitchen and pelayan through diproses_oleh",
+        "pembayaran 1-to-many nota in the original schema unless an additional unique constraint is added"
+      ]
+    },
+    "source_data_rules": [
+      "Read and inspect the complete SQL file, including every INSERT statement, before designing the migration.",
+      "Preserve all original rows and exact values for all 12 original tables.",
+      "Do not regenerate the sample data from memory or replace it with generic seed data.",
+      "Do not assume that IDs are contiguous in future production data; preserve foreign-key relationships.",
+      "Use the source SQL as a one-time import/seed source. Prevent duplicate insertion when migrations or seed scripts are rerun.",
+      "Create a data validation report comparing source row counts and key values with Supabase after import.",
+      "If the source SQL is not available in the repository, stop data migration and clearly request that the file be placed in the project root. Do not fabricate replacement records."
+    ],
+    "postgresql_supabase_compatibility": [
+      "The source begins with CREATE DATABASE IF NOT EXISTS public.restaurant_db; this is not valid PostgreSQL syntax and Supabase projects do not allow creating a database this way. Do not execute this statement. The Supabase project database already exists.",
+      "Use Supabase SQL Editor or Supabase migrations to create objects in the existing project database and the public schema.",
+      "Review GENERATED ALWAYS AS IDENTITY behavior and preserve explicit IDs only when the import requires them; reset/advance identity sequences safely after import.",
+      "Use PostgreSQL-compatible syntax throughout.",
+      "Review the source SQL for dependency order and ensure referenced parent rows exist before child inserts.",
+      "Do not drop existing Supabase tables or data automatically. Inspect the target database first and require a safe migration plan."
+    ],
+    "known_data_quality_and_schema_gaps": [
+      "menu has no category column. Add a category field only through a documented migration and assign categories through a transparent, reviewable mapping based on menu names. Never pretend the category existed in the original source.",
+      "detail_pemesanan has no unit-price snapshot. Add harga_satuan_saat_transaksi for new orders so historical order values remain stable when current menu prices change. For legacy records, leave the snapshot NULL unless a defensible value can be derived from the source menu price at migration time; label that value as reconstructed if populated.",
+      "The supplied historical pembayaran.total_harga values may not equal the sum of current menu price multiplied by detail quantity. Preserve historical payment totals exactly. Do not silently overwrite or 'correct' them. Create a reconciliation report and show discrepancies clearly.",
+      "The original schema has no explicit order-to-courier assignment relation. Add a pengiriman table or equivalent relation linked to pemesanan and kurir for delivery assignment, delivery address, delivery status, and timestamps. Do not infer a courier for old orders unless the source explicitly supports it.",
+      "The original schema has no explicit order type. Add jenis_pesanan with controlled values dine_in, takeaway, and delivery. For legacy rows, infer only where the source is unambiguous; otherwise use unknown or needs_review and record the inference rule.",
+      "The original schema has no login/profile/role table. Integrate Supabase Auth and add an application profile/role table linked to auth.users. Do not treat staff records as authentication credentials.",
+      "The original schema has no explicit inventory or stock table. Do not invent inventory quantities or stock history. Inventory may be an optional future module only if a proper schema and workflows are added.",
+      "The original schema does not link individual reviews to individual orders. Do not claim an ulasan belongs to a specific pemesanan unless a new explicit relation is added and populated from reliable data.",
+      "nota.list_menu is limited to varchar(100) and may be too short. Prefer rendering receipt line items from normalized order details; if retaining this field for compatibility, widen it safely or populate it as a non-authoritative snapshot.",
+      "The original schema does not guarantee unique nota per payment. Decide and document whether one receipt per payment is required; enforce it only after checking existing data for duplicates."
+    ]
+  },
+  "database_extension_requirements": {
+    "strategy": "Preserve all 12 original tables and their original records. Extend the schema only where needed for secure authentication, reliable order processing, delivery workflow, and historical price integrity.",
+    "possible_additions": [
+      {
+        "table": "profiles",
+        "purpose": "Connect Supabase Auth users to application roles and optional staff/waiter identities.",
+        "fields": [
+          "id references auth.users(id)",
+          "role",
+          "id_staff nullable",
+          "id_pelayan nullable",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "roles": [
+          "admin",
+          "cashier",
+          "kitchen",
+          "waiter",
+          "courier"
+        ],
+        "rules": [
+          "Use a constrained role value.",
+          "Do not expose auth secrets.",
+          "Prevent a profile from mapping ambiguously to incompatible staff identities."
+        ]
+      },
+      {
+        "table": "pengiriman",
+        "purpose": "Track delivery assignments and status.",
+        "fields": [
+          "id_pengiriman",
+          "id_pemesanan unique",
+          "id_kurir nullable",
+          "alamat_pengiriman",
+          "status_pengiriman",
+          "catatan_pengiriman",
+          "waktu_ditugaskan",
+          "waktu_diambil",
+          "waktu_sampai",
+          "created_at",
+          "updated_at"
+        ],
+        "rules": [
+          "Use foreign keys.",
+          "Use controlled delivery statuses.",
+          "Keep delivery records only for delivery orders."
+        ]
+      },
+      {
+        "table": "audit_log",
+        "purpose": "Record important administrative actions and sensitive status changes.",
+        "fields": [
+          "id",
+          "actor_user_id",
+          "entity_type",
+          "entity_id",
+          "action",
+          "before_data",
+          "after_data",
+          "created_at"
+        ],
+        "rules": [
+          "Restrict access to authorized roles.",
+          "Do not log passwords, tokens, or payment secrets."
+        ]
+      }
+    ],
+    "migration_requirements": [
+      "Create versioned SQL migration files.",
+      "Use transactions where supported and make migration steps safe to rerun where practical.",
+      "Preserve original table names and IDs to avoid breaking the supplied dataset.",
+      "Add indexes for common foreign-key joins, order dates, payment status, order status, and menu search where useful.",
+      "Add database constraints for valid statuses, positive prices, positive quantities, valid ratings, and referential integrity.",
+      "Before adding a UNIQUE constraint, query for duplicates and resolve them transparently.",
+      "Create a seed/import script that imports the exact source dataset once and validates row counts.",
+      "Provide a rollback or recovery note for every non-trivial schema migration."
+    ]
+  },
+  "functional_modules": [
+    {
+      "name": "Authentication and Authorization",
+      "features": [
+        "Login and logout using Supabase Auth.",
+        "Persist the authenticated session securely on the server side.",
+        "Support roles admin, cashier, kitchen, waiter, and courier.",
+        "Protect routes and actions by role.",
+        "Provide a user profile page and active/inactive account state.",
+        "Provide an admin-only user/role management screen if supported safely by the chosen Supabase Auth integration.",
+        "Never store plaintext passwords."
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "features": [
+        "Show revenue for today, selected date range, and comparison with the previous equivalent period.",
+        "Show total orders and counts by order status.",
+        "Show payment totals and counts grouped by payment method and payment status.",
+        "Show best-selling menu items calculated from detail_pemesanan quantities.",
+        "Show order trends over time.",
+        "Show average delivery review rating and rating distribution.",
+        "Show pending orders and operational alerts.",
+        "Provide date-range filters and refresh behavior.",
+        "All figures and charts must be calculated from Supabase records, never hardcoded."
+      ],
+      "calculation_rules": [
+        "Recognized revenue = SUM(pembayaran.total_harga) only for payments whose status_pembayaran is Lunas, unless the UI explicitly labels another metric.",
+        "Pending and failed payments must not be counted as realized revenue.",
+        "Cancelled orders must be excluded from completed-order revenue unless a clearly labeled gross/attempted metric is shown.",
+        "Order counts must specify whether they include all statuses or only completed orders.",
+        "Best-selling quantity = SUM(detail_pemesanan.jumlah_item), grouped by menu.",
+        "Average rating = AVG(ulasan.rating), with the number of reviews shown.",
+        "Avoid double counting caused by joins between one-to-many tables. Aggregate in separate queries or use correct grouping."
+      ]
+    },
+    {
+      "name": "Menu Management",
+      "features": [
+        "List, search, filter, sort, create, view, edit, and deactivate menu items.",
+        "Show name, description, price, and added category.",
+        "Use category filters based on the new documented category column.",
+        "Validate non-empty menu name and non-negative/positive price according to the database constraint.",
+        "Prevent destructive deletion of menu items referenced by historical orders; prefer deactivate/archive.",
+        "Show the number of times a menu item has been ordered, calculated from detail_pemesanan."
+      ]
+    },
+    {
+      "name": "Table Management",
+      "features": [
+        "Show all tables using customer records.",
+        "Display nomor_meja and qr_meja.",
+        "Provide a visual table grid with states available, occupied, and reserved only when those states can be derived from active orders or explicitly stored.",
+        "Allow opening a new dine-in order from a table.",
+        "Allow viewing the active order associated with a table.",
+        "Do not rename the underlying customer table or treat its rows as individual customer profiles.",
+        "Generate or display QR table identifiers using the stored qr_meja value; do not fabricate external QR destinations."
+      ]
+    },
+    {
+      "name": "Order / POS Management",
+      "features": [
+        "Create orders for dine-in, takeaway, and delivery.",
+        "Select a table for dine-in orders.",
+        "Browse and search menu items, filter by category, and add items to a cart.",
+        "Increase/decrease quantity, remove cart items, and show line subtotals and grand total.",
+        "Capture order description, guest count where applicable, and order location/type.",
+        "Assign a kitchen staff member and waiter using diproses_oleh.",
+        "For delivery, capture delivery address and optionally assign a courier through pengiriman.",
+        "Show order status and allow authorized staff to update it through valid transitions.",
+        "Support order detail view and edit before payment according to role and status.",
+        "Prevent invalid state transitions and duplicate submissions.",
+        "Persist order, order details, payment, assignment, and receipt consistently."
+      ],
+      "order_statuses": {
+        "canonical_values_to_review": [
+          "Menunggu",
+          "Diproses",
+          "Siap",
+          "Selesai",
+          "Dibatalkan"
+        ],
+        "rules": [
+          "Inspect all distinct status_pemesanan values in the source before defining normalization.",
+          "Preserve legacy values or map them through an explicit migration.",
+          "Do not allow arbitrary free-text status values for new records.",
+          "Define role-based transitions and record status changes in audit_log."
+        ]
+      },
+      "order_transaction_rules": [
+        "Use a single logical transaction for creating an order and its dependent records.",
+        "Calculate new order totals from the selected menu prices and quantities on the trusted server side.",
+        "Insert payment and order records in an order that satisfies the circular application dependency and foreign-key constraints; use a safe two-step transaction if needed.",
+        "Insert detail_pemesanan rows and staff assignments only after their parent order exists.",
+        "Use generated IDs returned by Supabase; never guess the next ID.",
+        "If any dependent write fails, roll back or compensate so partial orders are not left behind.",
+        "Use idempotency protection or duplicate-submit prevention for payment and order creation."
+      ]
+    },
+    {
+      "name": "Kitchen Display",
+      "features": [
+        "Show active orders in a kitchen-friendly queue.",
+        "Display order number, time, menu lines, quantities, and order notes.",
+        "Filter by status and sort by oldest waiting order.",
+        "Allow kitchen role to move orders through allowed preparation statuses.",
+        "Refresh frequently or use Supabase Realtime if configured securely.",
+        "Keep the interface readable on tablets commonly used in kitchens."
+      ]
+    },
+    {
+      "name": "Payment",
+      "features": [
+        "Support Cash, Debit, and QRIS as recorded payment methods.",
+        "Support payment statuses Pending, Lunas, and Gagal, normalized from source values without losing legacy data.",
+        "Show amount due, amount received, and change for cash payments.",
+        "Do not claim to process real bank, debit, or QRIS transactions unless a real payment gateway integration is configured.",
+        "For this implementation, non-cash payment confirmation may be recorded manually by an authorized cashier and must be clearly labeled as manual confirmation.",
+        "Prevent a second successful payment for an already paid order unless a documented refund/re-payment flow exists.",
+        "Keep payment status and order status logically consistent."
+      ]
+    },
+    {
+      "name": "Receipt and Queue",
+      "features": [
+        "Generate a receipt after successful order/payment persistence.",
+        "Display receipt number, queue number, order time, table/order type, item details, quantities, unit prices, subtotals, total, and payment method/status.",
+        "Print through browser print support with a clean receipt stylesheet.",
+        "Allow receipt preview and reprint for authorized users.",
+        "Generate queue numbers safely and avoid collisions.",
+        "Build item descriptions from normalized order detail rows; do not rely only on nota.list_menu."
+      ]
+    },
+    {
+      "name": "Staff Management",
+      "features": [
+        "View and search staff, kitchen staff, couriers, and waiters.",
+        "Create and edit records only where supported by the schema and role rules.",
+        "Show role membership based on staff_kitchen and kurir relations.",
+        "Keep pelayan separate from staff unless a deliberate migration establishes a reliable mapping.",
+        "Show assigned order workload calculated from diproses_oleh and pengiriman.",
+        "Archive rather than delete staff referenced by historical data."
+      ]
+    },
+    {
+      "name": "Delivery Management",
+      "features": [
+        "Show delivery orders and their delivery status.",
+        "Assign an available courier.",
+        "Record delivery address and delivery notes.",
+        "Track assigned, picked-up, and delivered timestamps.",
+        "Show courier workload and delivery history.",
+        "Do not fabricate GPS tracking or live maps; those require an external location integration."
+      ]
+    },
+    {
+      "name": "Reviews",
+      "features": [
+        "List reviews with date, courier, rating, and comment.",
+        "Filter by courier, date, and rating.",
+        "Show average rating and rating distribution.",
+        "Do not claim a review is tied to a specific order unless the schema is extended with a reliable order relation."
+      ]
+    },
+    {
+      "name": "Reports and Analytics",
+      "features": [
+        "Sales report by day, week, month, and custom date range.",
+        "Order report by status and order type.",
+        "Payment report by method and status.",
+        "Menu performance and best-selling items.",
+        "Courier performance and review ratings.",
+        "Staff workload summary.",
+        "Export filtered reports to CSV; add PDF only if implemented reliably.",
+        "All reports must query Supabase and reflect the same persisted data as the dashboard."
+      ]
+    },
+    {
+      "name": "Settings",
+      "features": [
+        "Restaurant display name and receipt preferences.",
+        "Timezone and currency display settings.",
+        "User profile and role information.",
+        "Connection status and application version.",
+        "Do not store sensitive Supabase credentials in editable UI settings."
+      ]
+    }
+  ],
+  "object_oriented_design": {
+    "principles": [
+      "Use encapsulation with private fields and controlled accessors.",
+      "Use abstraction for shared behavior and service contracts.",
+      "Use inheritance only when there is a genuine is-a relationship.",
+      "Use polymorphism for payment method strategies, role-specific behavior, and other justified extension points.",
+      "Prefer composition over unnecessary inheritance.",
+      "Use enums or value objects for controlled states.",
+      "Keep UI components, business logic, and data access separate."
+    ],
+    "suggested_domain_types": [
+      "MenuItem",
+      "MenuCategory",
+      "RestaurantTable",
+      "Order",
+      "OrderItem",
+      "Payment",
+      "PaymentMethod",
+      "PaymentStatus",
+      "OrderStatus",
+      "OrderType",
+      "Staff",
+      "KitchenStaff",
+      "Courier",
+      "Waiter",
+      "Delivery",
+      "Receipt",
+      "Review",
+      "UserProfile"
+    ],
+    "patterns": [
+      "Repository pattern for data access.",
+      "Service layer for business rules and calculations.",
+      "DTOs for API payloads; do not expose persistence objects directly to UI.",
+      "Strategy pattern for payment-method-specific behavior where useful.",
+      "State transition service for order and delivery statuses.",
+      "Dependency injection through Spring."
+    ],
+    "suggested_package_structure": {
+      "src/main/java": [
+        "config/",
+        "security/",
+        "domain/model/",
+        "domain/enums/",
+        "repository/",
+        "service/",
+        "dto/",
+        "integration/supabase/",
+        "ui/layout/",
+        "ui/dashboard/",
+        "ui/menu/",
+        "ui/tables/",
+        "ui/orders/",
+        "ui/kitchen/",
+        "ui/payments/",
+        "ui/receipts/",
+        "ui/staff/",
+        "ui/delivery/",
+        "ui/reviews/",
+        "ui/reports/",
+        "ui/settings/",
+        "util/"
+      ],
+      "src/main/resources": [
+        "application.yml",
+        "META-INF/resources/",
+        "themes/restoflow/",
+        "db/migration/"
+      ],
+      "root_files": [
+        "pom.xml",
+        ".env.example",
+        ".gitignore",
+        "README.md",
+        "SUPABASE_SETUP.md",
+        "DATABASE_AUDIT.md",
+        "TESTING.md"
+      ]
+    }
+  },
+  "data_consistency_and_integrity": {
+    "source_of_truth": "Supabase PostgreSQL is the single source of truth for all persisted business data.",
+    "mandatory_rules": [
+      "All production screens must load records from Supabase. Do not use hardcoded arrays as fallback business data.",
+      "All create, update, and delete/archive operations must persist to Supabase and report success only after the server confirms the operation.",
+      "After a successful mutation, refresh or update the UI from the persisted response so every screen reflects the same record.",
+      "Do not maintain a separate in-memory or local JSON database that can diverge from Supabase.",
+      "Local caching is allowed only as a temporary performance optimization with explicit invalidation and clear stale-data handling.",
+      "Use database foreign keys and constraints as the final integrity guard.",
+      "Use server-side validation for prices, quantities, statuses, roles, and totals.",
+      "Use UTC timestamps in storage where appropriate and display them in Asia/Jakarta.",
+      "Use optimistic UI only when rollback and error feedback are implemented.",
+      "Show loading, empty, success, validation-error, permission-error, and connection-error states.",
+      "Never display a success toast before the Supabase write succeeds."
+    ],
+    "legacy_reconciliation": [
+      "Create a report that compares payment totals with calculated order line totals for every legacy order.",
+      "Preserve original payment totals and original menu prices.",
+      "Mark discrepancies as legacy data differences; do not silently rewrite records.",
+      "Use harga_satuan_saat_transaksi for new orders so future totals remain auditable.",
+      "Validate source and destination row counts for every original table.",
+      "Validate foreign-key orphan counts and duplicate constraints after import."
+    ]
+  },
+  "security": {
+    "requirements": [
+      "Enable Row Level Security on all tables exposed through Supabase APIs.",
+      "Create least-privilege policies for admin, cashier, kitchen, waiter, and courier.",
+      "Use authenticated user JWTs for ordinary application requests.",
+      "Do not trust role values supplied by the browser; derive roles from a protected profile record or trusted JWT claims.",
+      "Prevent users from changing their own role or privilege mapping.",
+      "Restrict kitchen users to the order data needed for preparation.",
+      "Restrict couriers to assigned delivery data and the minimum related order information.",
+      "Restrict cashiers to order and payment operations required for their work.",
+      "Restrict administrative operations to admin users.",
+      "Validate all input on the server and database.",
+      "Use parameterized queries or safe API filters; never concatenate untrusted SQL.",
+      "Do not log access tokens, refresh tokens, passwords, or service-role keys.",
+      "Add CSRF/session protections appropriate to the selected server-side Vaadin architecture.",
+      "Document all RLS policies and test both allowed and denied access."
+    ],
+    "required_security_tests": [
+      "Unauthenticated user cannot access protected business data.",
+      "Cashier cannot edit role assignments or administer users.",
+      "Kitchen user cannot modify payments or menu prices.",
+      "Courier cannot view unrelated courier assignments.",
+      "Waiter cannot access administrative settings.",
+      "Admin can perform authorized administrative actions.",
+      "A user cannot escalate privileges by editing request payloads.",
+      "Service-role key is never present in browser-delivered assets."
+    ]
+  },
+  "user_experience": {
+    "navigation": [
+      "Dashboard",
+      "POS / Pemesanan",
+      "Pesanan",
+      "Kitchen Display",
+      "Menu",
+      "Meja",
+      "Pembayaran",
+      "Nota",
+      "Staff",
+      "Pengiriman",
+      "Ulasan",
+      "Laporan",
+      "Pengaturan"
+    ],
+    "global_components": [
+      "Responsive sidebar or mobile navigation.",
+      "Top bar with page title, user profile, role, and logout.",
+      "Reusable data table with search, sorting, pagination, and filters.",
+      "Reusable confirmation dialog for destructive actions.",
+      "Reusable form validation and notification system.",
+      "Status badges with consistent semantic colors.",
+      "Loading skeletons or progress indicators.",
+      "Empty states with a clear next action."
+    ],
+    "interaction_quality": [
+      "Use clear Indonesian labels and consistent terminology.",
+      "Use confirmation for irreversible or sensitive actions.",
+      "Preserve form input when a recoverable request fails.",
+      "Prevent accidental double clicks on submit/payment buttons.",
+      "Use accessible form labels and keyboard navigation.",
+      "Provide helpful error messages without exposing internal secrets or stack traces.",
+      "Make the POS cart easy to operate with mouse, keyboard, and touch."
+    ]
+  },
+  "implementation_plan": [
+    {
+      "phase": 1,
+      "name": "Repository and source audit",
+      "tasks": [
+        "Inspect repository structure, Java version, Maven configuration, existing UI, and current tests.",
+        "Read the complete DATABASE RESTORAN(1).sql file.",
+        "Document all 12 original tables, columns, primary keys, foreign keys, constraints, seed row counts, and distinct status/method values.",
+        "Identify SQL compatibility issues and data discrepancies.",
+        "Create DATABASE_AUDIT.md and a concise implementation plan."
+      ],
+      "exit_criteria": [
+        "Repository audit completed.",
+        "Source schema documented accurately.",
+        "No source data has been changed."
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Project foundation and design system",
+      "tasks": [
+        "Set up or adapt Spring Boot, Vaadin, Maven, environment configuration, and logging.",
+        "Create the minimal responsive application shell.",
+        "Implement typography, colors, CSS Grid layout, breakpoints, navigation, and reusable UI components.",
+        "Add a connection/configuration status view."
+      ],
+      "exit_criteria": [
+        "Application starts locally.",
+        "Responsive shell works at desktop, laptop, tablet, and mobile widths.",
+        "No credentials are committed."
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Supabase schema and data migration",
+      "tasks": [
+        "Create versioned PostgreSQL migrations for the original schema and necessary extensions.",
+        "Exclude the invalid CREATE DATABASE IF NOT EXISTS statement.",
+        "Import the exact supplied source records without duplication.",
+        "Add indexes, constraints, profiles, delivery relation, and historical unit-price snapshot as justified.",
+        "Configure RLS and role policies.",
+        "Create seed import verification and legacy reconciliation reports."
+      ],
+      "exit_criteria": [
+        "All original tables and rows are represented in Supabase.",
+        "Row counts and key relationships pass validation.",
+        "RLS is enabled and tested.",
+        "Legacy discrepancies are reported, not silently modified."
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Domain model and Supabase integration",
+      "tasks": [
+        "Implement Java domain models, enums, DTOs, repositories, Supabase HTTP client, authentication integration, and service layer.",
+        "Implement secure session handling and user-role resolution.",
+        "Implement centralized error handling, validation, pagination, and query filtering."
+      ],
+      "exit_criteria": [
+        "Application can authenticate and read/write permitted Supabase records.",
+        "No database secret is exposed to the browser.",
+        "Repository and service tests pass."
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Business modules",
+      "tasks": [
+        "Implement dashboard and analytics.",
+        "Implement menu and table management.",
+        "Implement POS and order workflow.",
+        "Implement kitchen display.",
+        "Implement payment and receipt workflow.",
+        "Implement staff and delivery management.",
+        "Implement reviews and reports.",
+        "Implement settings and role-aware navigation."
+      ],
+      "exit_criteria": [
+        "All listed modules have functional data-backed workflows.",
+        "CRUD operations persist to Supabase.",
+        "Role restrictions are enforced."
+      ]
+    },
+    {
+      "phase": 6,
+      "name": "Testing, responsive QA, and documentation",
+      "tasks": [
+        "Run Maven tests and production build.",
+        "Test complete workflows from order creation through payment and receipt.",
+        "Test legacy data visibility and reconciliation.",
+        "Test RLS and role permissions.",
+        "Test layouts at representative mobile, tablet, laptop, and desktop viewport sizes.",
+        "Fix errors, warnings, broken navigation, and overflow issues.",
+        "Write setup, migration, deployment, user, and troubleshooting documentation."
+      ],
+      "exit_criteria": [
+        "Build succeeds.",
+        "Critical tests pass.",
+        "All essential workflows are verified against Supabase.",
+        "Responsive UI has no critical overflow or inaccessible controls.",
+        "README and setup documentation are complete."
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "The application is a working Java OOP application with a Java-authored Vaadin GUI.",
+    "The application runs in desktop, laptop, tablet, and mobile browsers.",
+    "The visual design follows the specified minimalism theme and exact requested font/color choices.",
+    "The original 12 SQL tables and their supplied records are preserved in Supabase.",
+    "The application uses Supabase as the single source of truth.",
+    "Dashboard metrics and reports are derived from live database queries.",
+    "Menu, table, order, kitchen, payment, receipt, staff, delivery, and review workflows function.",
+    "Authentication and role-based access are implemented with tested RLS policies.",
+    "Payment integration is not misrepresented: Cash, Debit, and QRIS are recorded, while actual external payment processing is not claimed unless integrated.",
+    "Historical totals are preserved and discrepancies are reported.",
+    "New orders use reliable server-side calculations and transaction-safe persistence.",
+    "No fake production data, placeholder business metrics, or dead buttons remain.",
+    "The project builds successfully and setup instructions allow another developer to run it."
+  ],
+  "required_deliverables": [
+    "Complete application source code.",
+    "pom.xml with pinned compatible dependencies.",
+    ".env.example with Supabase placeholders.",
+    ".gitignore protecting secrets and build artifacts.",
+    "Versioned Supabase/PostgreSQL migration SQL files.",
+    "Exact source-data import/seed process.",
+    "RLS policies and role authorization implementation.",
+    "DATABASE_AUDIT.md documenting original schema, source row counts, and known inconsistencies.",
+    "SUPABASE_SETUP.md with step-by-step Supabase project configuration, SQL migration/import order, Auth setup, and placeholder replacement instructions.",
+    "README.md with prerequisites, local setup, run, test, build, and deployment instructions.",
+    "TESTING.md with test commands, scenarios, and results.",
+    "A legacy data reconciliation report.",
+    "A clear list of implemented features, limitations, and any remaining manual setup."
+  ],
+  "execution_instructions": {
+    "mode": "Autonomous implementation with verification.",
+    "sequence": [
+      "Start by auditing the repository and source SQL.",
+      "Present a concise plan based on actual findings.",
+      "Implement the application end-to-end in logical phases.",
+      "Create migrations and documentation before relying on schema changes.",
+      "Build and test after each major phase.",
+      "Fix failures rather than merely reporting them.",
+      "At the end, provide exact commands to configure Supabase, run the application, run tests, and create a production build."
+    ],
+    "do_not": [
+      "Do not stop after generating a plan.",
+      "Do not deliver only a UI mockup.",
+      "Do not substitute local mock arrays for Supabase data.",
+      "Do not silently alter the original dataset.",
+      "Do not expose the Supabase service-role key.",
+      "Do not claim real QRIS/debit gateway processing without a real provider integration.",
+      "Do not add unrelated features such as payroll, accounting, or stock management without a justified schema and explicit scope.",
+      "Do not claim the application is perfect or production-ready without test evidence."
+    ],
+    "final_response_format": [
+      "Summarize what was implemented.",
+      "List files created or changed.",
+      "Report build and test results honestly.",
+      "Explain Supabase setup steps still required from the user.",
+      "List known limitations and unresolved data-quality issues.",
+      "Provide exact run and build commands."
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+.root { -fx-font-family: "Poppins"; -fx-font-size: 13px; -fx-background-color: #f7f7f7; }
+.label { -fx-text-fill: #202020; }
+.sidebar { -fx-background-color: #ededed; -fx-padding: 30 20; -fx-border-color: transparent #d8d8d8 transparent transparent; }
+.brand { -fx-font-size: 28px; -fx-font-weight: bold; }
+.muted { -fx-text-fill: #666666; }
+.page-title { -fx-font-family: "Rubik"; -fx-font-size: 26px; -fx-font-weight: bold; }
+.card { -fx-padding: 22; -fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #d8d8d8; -fx-border-radius: 10; }
+.card-title { -fx-font-size: 17px; -fx-font-weight: bold; }
+.button { -fx-background-color: #e5e5e5; -fx-text-fill: #202020; -fx-padding: 12 16; -fx-background-radius: 6; -fx-cursor: hand; }
+.button:hover { -fx-background-color: #c9c9ca; }
+.button:focused { -fx-border-color: #426b91; -fx-border-radius: 6; }
+.scroll-pane, .scroll-pane > .viewport { -fx-background-color: #f7f7f7; }
+.toolbar { -fx-background-color: #ffffff; -fx-border-color: transparent transparent #d8d8d8 transparent; }
+.primary { -fx-background-color: #202020; -fx-text-fill: #ffffff; -fx-font-weight: bold; }
+.primary:hover { -fx-background-color: #424242; }
+.text-field, .password-field, .text-area, .combo-box, .date-picker { -fx-font-size: 13px; }
+.table-view { -fx-background-color: #ffffff; -fx-border-color: #d8d8d8; }
+.table-view .column-header-background { -fx-background-color: #ededed; }
+.table-view .column-header { -fx-background-color: #ededed; -fx-size: 38px; }
+.table-row-cell { -fx-cell-size: 40px; }
+.table-row-cell:selected { -fx-background-color: #dce7f0; }
+.table-row-cell:selected .text { -fx-fill: #202020; }
+.tab-pane { -fx-background-color: #f7f7f7; }

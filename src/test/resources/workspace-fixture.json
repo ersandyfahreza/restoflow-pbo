@@ -1,0 +1,13 @@
+{
+  "profile":{"id":"00000000-0000-0000-0000-000000000001","display_name":"Admin pengujian","role":"admin","is_active":true},
+  "settings":{"display_name":"Restoran uji","receipt_footer":"Data fixture pengujian, bukan data operasional."},
+  "stats":{"revenue":56000,"orders":1,"active":1,"pending":0},"order_count":1,
+  "menu":[{"id_menu":1,"nama_menu":"Nasi uji","category":"Makanan","harga_satuan":25000,"deskripsi_menu":"Fixture tes UI","is_active":true},{"id_menu":8,"nama_menu":"Teh uji","category":"Minuman","harga_satuan":6000,"is_active":true}],
+  "tables":[{"id_customer":1,"nomor_meja":"Meja uji 1","qr_meja":"QR-TEST-1","is_active":true}],
+  "staff":[{"id_staff":1,"nama_staff":"Dapur uji","nama_depan":"Dapur","nama_belakang":"Uji","kind":"kitchen","is_active":true},{"id_staff":6,"nama_staff":"Kurir uji","nama_depan":"Kurir","nama_belakang":"Uji","kind":"courier","is_active":true}],
+  "kitchen":[{"id_staff":1}],"couriers":[{"id_kurir":1,"id_staff":6}],
+  "waiters":[{"id_pelayan":"PLY-01","nama_depan":"Pelayan","nama_belakang":"Uji","is_active":true}],
+  "profiles":[{"id":"00000000-0000-0000-0000-000000000001","display_name":"Admin uji","role":"admin","is_active":true}],
+  "reviews":[{"id_ulasan":1,"id_kurir":1,"tanggal_rating":"2026-11-12","rating":5,"ulasan":"Fixture pengujian"}],
+  "orders":[{"id":66,"queue":"B66","time":"2026-11-12T05:00:00Z","table_id":null,"table_name":null,"type":"delivery","status":"Siap","notes":"Catatan uji","total":56000,"payment_status":"Lunas","method":"Cash","amount_received":60000,"courier_id":1,"address":"Alamat fixture pengujian","delivery_status":"Ditugaskan","items":[{"menu_id":1,"name":"Nasi uji","quantity":2,"price":25000,"reconstructed":false},{"menu_id":8,"name":"Teh uji","quantity":1,"price":6000,"reconstructed":false}],"assignments":[{"id_staff":1,"id_pelayan":"PLY-01"}]}]
+}
