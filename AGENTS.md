@@ -6,7 +6,7 @@
 - Pertahankan DATABASE RESTORAN.sql dan RestoFlow_Prompt.json sebagai sumber asli.
 - Java 17, JavaFX 17, Maven. GUI dan logika ditulis Java. Target Windows x64.
 - Jalankan dari root: `./scripts/maven.ps1 verify`, `./scripts/maven.ps1 javafx:run`.
-  Paket: `./scripts/package-windows.ps1` → dist/1.0.0/RestoFlow. Jelaskan perintah dengan bahasa sederhana.
+  Paket: `./scripts/package-windows.ps1` → dist/1.0.1/RestoFlow. Jelaskan perintah dengan bahasa sederhana.
 - Dependency/build cache ada di .tools; hasil build di target; distribusi di dist.
 - Model, service, repository dan UI terpisah saat modul tersebut dibutuhkan.
 - Instruksi terbaru pengguna: fokus menyelesaikan aplikasi, tanpa pembagian tim atau dokumen tugas.

@@ -1,23 +1,79 @@
-.root { -fx-font-family: "Poppins"; -fx-font-size: 13px; -fx-background-color: #f7f7f7; }
-.label { -fx-text-fill: #202020; }
-.sidebar { -fx-background-color: #ededed; -fx-padding: 30 20; -fx-border-color: transparent #d8d8d8 transparent transparent; }
-.brand { -fx-font-size: 28px; -fx-font-weight: bold; }
-.muted { -fx-text-fill: #666666; }
-.page-title { -fx-font-family: "Rubik"; -fx-font-size: 26px; -fx-font-weight: bold; }
-.card { -fx-padding: 22; -fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #d8d8d8; -fx-border-radius: 10; }
-.card-title { -fx-font-size: 17px; -fx-font-weight: bold; }
-.button { -fx-background-color: #e5e5e5; -fx-text-fill: #202020; -fx-padding: 12 16; -fx-background-radius: 6; -fx-cursor: hand; }
-.button:hover { -fx-background-color: #c9c9ca; }
-.button:focused { -fx-border-color: #426b91; -fx-border-radius: 6; }
-.scroll-pane, .scroll-pane > .viewport { -fx-background-color: #f7f7f7; }
-.toolbar { -fx-background-color: #ffffff; -fx-border-color: transparent transparent #d8d8d8 transparent; }
-.primary { -fx-background-color: #202020; -fx-text-fill: #ffffff; -fx-font-weight: bold; }
-.primary:hover { -fx-background-color: #424242; }
-.text-field, .password-field, .text-area, .combo-box, .date-picker { -fx-font-size: 13px; }
-.table-view { -fx-background-color: #ffffff; -fx-border-color: #d8d8d8; }
-.table-view .column-header-background { -fx-background-color: #ededed; }
-.table-view .column-header { -fx-background-color: #ededed; -fx-size: 38px; }
-.table-row-cell { -fx-cell-size: 40px; }
-.table-row-cell:selected { -fx-background-color: #dce7f0; }
-.table-row-cell:selected .text { -fx-fill: #202020; }
-.tab-pane { -fx-background-color: #f7f7f7; }
+/* Desktop workbench: purpose and design decisions in DESIGN.md. */
+.root { -fx-font-family: "Poppins"; -fx-font-size: 13px; -fx-background-color: #ededed; -fx-accent: #23584b; -fx-focus-color: #23584b; -fx-faint-focus-color: transparent; }
+.label, .check-box { -fx-text-fill: #202923; }
+.muted, .sidebar-caption, .table-count { -fx-text-fill: #526159; }
+.page-title { -fx-font-family: "Rubik"; -fx-font-size: 1.77em; -fx-font-weight: bold; }
+.window-frame { -fx-background-color: #ededed; -fx-border-color: #9ca59f; }
+.window-header { -fx-background-color: white; -fx-border-color: transparent transparent #c9c9ca transparent; }
+.window-caption { -fx-alignment: center-left; -fx-padding: 0 16; }
+.window-title { -fx-font-family: "Rubik"; -fx-font-weight: bold; }
+.window-purpose { -fx-text-fill: #526159; -fx-font-size: 12px; }
+.window-header .window-control { -fx-background-color: transparent; -fx-background-radius: 0; -fx-padding: 0; -fx-font-family: "Segoe UI"; -fx-font-size: 20px; -fx-font-weight: normal; }
+.window-header .window-control:hover { -fx-background-color: #e1e7e3; }
+.window-header .window-close:hover { -fx-background-color: #a32f30; -fx-text-fill: white; }
+.activity-status { -fx-background-color: #23584b; -fx-text-fill: white; -fx-padding: 8 16; }
+.login-screen { -fx-background-color: #ededed; }
+.login-panel { -fx-background-color: white; -fx-border-color: #c9c9ca; -fx-border-radius: 6; -fx-background-radius: 6; }
+.login-context { -fx-padding: 36; -fx-background-color: #e1e7e3; }
+.login-brand { -fx-font-family: "Rubik"; -fx-font-size: 20px; -fx-font-weight: bold; }
+.login-introduction { -fx-font-family: "Rubik"; -fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #23584b; }
+.login-description { -fx-font-size: 14px; }
+.validation-message { -fx-text-fill: #932b2d; }
+.sidebar { -fx-background-color: #e1e7e3; -fx-padding: 16 12; -fx-spacing: 6; -fx-border-color: transparent #c0c9c3 transparent transparent; }
+.brand { -fx-font-family: "Rubik"; -fx-font-size: 1.5em; -fx-padding: 0 8 10 8; }
+.sidebar-caption { -fx-font-size: 0.923em; }
+.sidebar .date-picker { -fx-font-size: 0.923em; }
+.sidebar .nav-button { -fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 7 12; -fx-font-weight: normal; }
+.sidebar .nav-button:hover { -fx-background-color: #cedbd3; }
+.sidebar .nav-button.active { -fx-background-color: #23584b; -fx-text-fill: white; -fx-font-weight: bold; }
+.sidebar .logout-button { -fx-background-color: transparent; -fx-text-fill: #932b2d; }
+.button { -fx-background-color: #dce4df; -fx-text-fill: #202923; -fx-padding: 8 12; -fx-background-radius: 4; -fx-border-radius: 4; -fx-border-color: transparent; -fx-cursor: hand; }
+.button:hover { -fx-background-color: #c8d8ce; }
+.button:armed { -fx-background-color: #b7cbbc; }
+.button:disabled { -fx-opacity: 0.5; }
+.primary, .sidebar-action { -fx-background-color: #23584b; -fx-text-fill: white; -fx-font-weight: bold; }
+.primary:hover, .sidebar-action:hover { -fx-background-color: #184537; }
+.text-button { -fx-background-color: transparent; -fx-text-fill: #23584b; -fx-underline: true; -fx-padding: 6 0; }
+.button:focused, .text-field:focused, .text-area:focused, .combo-box:focused, .date-picker:focused, .spinner:focused, .titled-pane:focused > .title { -fx-border-color: #23584b; -fx-border-width: 2; -fx-border-insets: -1; -fx-border-radius: 4; }
+.text-field, .text-area, .combo-box-base, .date-picker, .spinner { -fx-font-size: 1em; -fx-background-color: white; -fx-background-radius: 4; -fx-border-color: #8a9b90; -fx-border-radius: 4; }
+.text-field { -fx-padding: 7 9; }
+.text-area { -fx-padding: 4; }
+.text-area .content { -fx-background-color: white; }
+.text-input { -fx-text-fill: #202923; -fx-prompt-text-fill: #627268; -fx-highlight-fill: #23584b; -fx-highlight-text-fill: white; }
+.combo-box-base .arrow-button, .date-picker .arrow-button, .spinner .increment-arrow-button, .spinner .decrement-arrow-button { -fx-background-color: #e1e7e3; }
+.summary-strip { -fx-background-color: white; -fx-border-color: #c9c9ca; -fx-padding: 12; }
+.metric-value { -fx-font-size: 1.45em; -fx-text-fill: #23584b; }
+.metric { -fx-padding: 0 12 0 0; }
+.card { -fx-padding: 16; -fx-background-color: white; -fx-background-radius: 4; -fx-border-color: #c9c9ca; -fx-border-radius: 4; }
+.card-title { -fx-font-family: "Rubik"; -fx-font-size: 1.23em; -fx-font-weight: bold; }
+.pos-layout { -fx-alignment: top-center; }
+.pos-panel { -fx-spacing: 8; }
+.order-footer { -fx-spacing: 8; -fx-padding: 12; -fx-background-color: #e1e7e3; -fx-border-color: #bcc9c0 transparent transparent transparent; }
+.order-total { -fx-font-size: 1.45em; -fx-text-fill: #23584b; }
+.titled-pane > .title { -fx-background-color: #e1e7e3; -fx-padding: 8 10; }
+.titled-pane > .title > .text { -fx-fill: #202923; }
+.titled-pane > .content { -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 8 0 0 0; }
+.table-view { -fx-background-color: white; -fx-border-color: #c9c9ca; -fx-padding: 0; -fx-table-cell-border-color: #e2e6e3; }
+.table-view .column-header-background { -fx-background-color: #dce4df; }
+.table-view .column-header { -fx-background-color: transparent; -fx-size: 38px; -fx-border-color: transparent transparent #b6c3ba transparent; }
+.table-view .column-header .label { -fx-text-fill: #30483b; -fx-font-size: 0.923em; -fx-font-weight: bold; }
+.table-cell { -fx-alignment: center-left; -fx-padding: 7 8; }
+.table-row-cell { -fx-cell-size: 40px; -fx-background-color: white; }
+.table-row-cell:odd { -fx-background-color: #f4f6f4; }
+.table-row-cell:filled:hover { -fx-background-color: #e5eee8; }
+.table-row-cell:filled:selected { -fx-background-color: #c8dfd1; }
+.table-row-cell:selected .text { -fx-fill: #163d2c; }
+.table-view .placeholder .label { -fx-text-fill: #526159; -fx-padding: 16; }
+.tab-pane, .tab-pane .tab-header-area .tab-header-background { -fx-background-color: transparent; }
+.tab-pane .tab { -fx-background-color: #dce4df; -fx-background-radius: 4 4 0 0; -fx-padding: 8 14; }
+.tab-pane .tab:selected { -fx-background-color: white; }
+.tab-pane .tab-label { -fx-text-fill: #30483b; }
+.tab-pane .tab-content-area { -fx-background-color: white; -fx-border-color: #c9c9ca; }
+.scroll-pane, .scroll-pane > .viewport { -fx-background-color: transparent; }
+.scroll-bar:vertical, .scroll-bar:horizontal { -fx-background-color: transparent; }
+.scroll-bar .thumb { -fx-background-color: #8c9e92; -fx-background-radius: 4; }
+.split-pane { -fx-background-color: transparent; -fx-padding: 0; }
+.split-pane-divider { -fx-background-color: transparent; -fx-padding: 0 5; }
+.check-box .box { -fx-background-color: white; -fx-border-color: #8a9b90; -fx-border-radius: 3; -fx-background-radius: 3; }
+.dialog-pane { -fx-background-color: #ededed; }
+.dialog-pane .header-panel { -fx-background-color: white; }

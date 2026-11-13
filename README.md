@@ -1,15 +1,20 @@
-# RestoFlow Desktop 1.0.0
+# RestoFlow Desktop 1.0.3
 
 Aplikasi JavaFX desktop untuk manajemen restoran: login, dashboard, menu, meja, POS,
 antrean dapur, pembayaran manual, nota/cetak, staf, pengiriman, ulasan, laporan CSV,
 pengaturan restoran, dan hak akses pengguna. Data operasional disimpan di Supabase.
 
+Unduh [paket Windows x64 versi 1.0.3](https://github.com/ersandyfahreza/restoflow-pbo/releases/download/v1.0.3/RestoFlow-1.0.3-Windows-x64.zip)
+melalui [GitHub Releases](https://github.com/ersandyfahreza/restoflow-pbo/releases/tag/v1.0.3).
+Ekstrak seluruh ZIP, lalu jalankan RestoFlow.exe di dalam folder RestoFlow.
+Source versi rilis tersedia pada tag v1.0.3; password dan konfigurasi pribadi tidak disertakan.
+
 ## Membuka aplikasi Windows
 
-Buka `dist/1.0.0/RestoFlow/RestoFlow.exe`. Seluruh folder RestoFlow harus tetap bersama.
+Di folder paket, jalankan `RestoFlow.exe`. Seluruh folder RestoFlow harus tetap bersama.
 Runtime Java disertakan, sehingga penerima paket tidak perlu memasang JDK.
 Paket ini aplikasi portabel, bukan installer wizard. Paket lama 0.1.0 di `dist/RestoFlow`
-adalah fondasi sebelumnya; gunakan versi dalam `dist/1.0.0`.
+adalah fondasi sebelumnya; gunakan versi dalam `dist/1.0.3`.
 
 Pada pembukaan pertama pilih **Atur koneksi database**, masukkan Project URL HTTPS dan
 publishable key dari proyek Supabase, lalu masuk memakai akun yang memiliki profil.
@@ -42,25 +47,42 @@ Jika unduhan gagal, periksa koneksi/proxy dan pesan error lengkap.
 
 `verify` mengompilasi kode, menjalankan tes termasuk render JavaFX dan HTTP loopback,
 lalu menyiapkan JAR/dependency. Pengemasan menjalankan clean verify dan jpackage.
-Hasil executable: `dist/1.0.0/RestoFlow/RestoFlow.exe`.
+Hasil executable: `dist/1.0.3/RestoFlow/RestoFlow.exe`.
 Jika tujuan sudah ada, pindahkan paket lama dahulu; skrip tidak menimpanya otomatis.
 Jangan menjalankan JAR tunggal tanpa dependency. Kemas/bagikan seluruh folder aplikasi.
 
 ## Pemakaian utama
 
-1. Login, lalu periksa rentang tanggal pada bagian atas (WIB, maksimal 366 hari).
+1. Login, lalu periksa rentang tanggal pada sidebar (WIB, maksimal 366 hari).
 2. Admin mengelola menu, kategori dan meja. Data yang memiliki riwayat diarsipkan.
 3. POS: pilih dine_in/takeaway/delivery, meja atau alamat sesuai kebutuhan, isi keranjang,
    dan simpan. Penugasan dapur/pelayan boleh dikosongkan atau dipilih berpasangan.
 4. Dapur mengubah Menunggu → Diproses → Siap.
+   Pilih baris terlebih dahulu. Tombol status aktif hanya untuk transisi yang diizinkan;
+   status Selesai membutuhkan pembayaran lunas dan pengiriman Terkirim bila ada.
+   Menu dapat diberi kategori Makanan atau Minuman melalui Tambah menu / Edit.
+   Filter kategori dan teks pencarian dapat dipakai bersama pada Menu dan POS.
+   Menu lama tidak otomatis diklasifikasikan; admin menentukan kategorinya.
 5. Kasir mencatat Cash atau konfirmasi manual Debit/QRIS. Pesanan lunas dapat diselesaikan.
+   Dari Pesanan pilih baris, lalu Catat pembayaran, atau gunakan halaman Pembayaran.
+   Pesanan Diproses/Siap tetap dapat dibayar jika Pending. Edit isi pesanan digunakan
+   untuk mengubah item saat Menunggu, bukan untuk pembayaran.
 6. Untuk delivery, kasir menugaskan kurir; kurir mengubah Ditugaskan → Diambil → Terkirim.
 7. Nota dapat dipratinjau, dicetak menggunakan printer sistem, atau disimpan TXT.
 8. Laporan mendukung rentang tanggal, pencarian dan ekspor CSV; grafik harian/mingguan/bulanan.
 
-Tekan Muat ulang untuk mengambil keadaan terbaru. Semua penyimpanan dikonfirmasi server.
+Tekan Terapkan rentang untuk mengambil keadaan terbaru. Semua penyimpanan dikonfirmasi server.
 Jika request timeout, hasil bisa belum diketahui: muat ulang sebelum mengulangi tindakan.
 Pembuatan pesanan memiliki ID permintaan untuk retry yang sama; pembayaran dikunci server.
+Zoom dapat diubah dengan Ctrl + + dan Ctrl + -. Tekan Ctrl + 0 untuk mengembalikan zoom
+ke 100%; batas zoom adalah 80–140%.
+
+Gunakan tombol − untuk mengecilkan ke taskbar, □ untuk memperbesar/memulihkan ukuran,
+dan × untuk menutup. Seret judul untuk memindahkan, klik ganda untuk memperbesar,
+atau seret tepi untuk mengubah ukuran (minimum 1000 × 640). Alt+F4 menutup aplikasi;
+Ctrl+F11 memperbesar/memulihkan. Keranjang yang belum disimpan meminta konfirmasi
+saat keluar. Kontrol jendela tetap aktif selama permintaan jaringan berjalan.
+Detail perubahan UI dan batas pengujian: `docs/UI_VERIFICATION.md`.
 
 ## Konfigurasi dan keamanan
 

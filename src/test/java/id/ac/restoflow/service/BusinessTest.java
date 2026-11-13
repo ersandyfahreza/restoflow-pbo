@@ -8,6 +8,19 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BusinessTest {
+    @Test void orderStatusFollowsServerSequenceAndPayment(){
+        var order=Json.object().put("status","Diproses").put("payment_status","Pending");
+        assertFalse(OrderService.statusBlockReason(order,"admin","Diproses").isEmpty());
+        assertFalse(OrderService.statusBlockReason(order,"admin","Selesai").isEmpty());
+        assertEquals("",OrderService.statusBlockReason(order,"kitchen","Siap"));
+        order.put("status","Siap");assertFalse(OrderService.statusBlockReason(order,"admin","Selesai").isEmpty());
+        order.put("payment_status","Lunas");assertEquals("",OrderService.statusBlockReason(order,"cashier","Selesai"));
+        assertFalse(OrderService.statusBlockReason(order,"kitchen","Selesai").isEmpty());
+        assertFalse(OrderService.statusBlockReason(order,"admin","Dibatalkan").isEmpty());
+        order.put("type","delivery").put("delivery_status","Diambil");assertFalse(OrderService.statusBlockReason(order,"admin","Selesai").isEmpty());
+        order.put("delivery_status","Terkirim");assertEquals("",OrderService.statusBlockReason(order,"admin","Selesai"));
+        assertFalse(OrderService.statusBlockReason(null,"admin","Siap").isEmpty());
+    }
     @Test void checkoutRequiresTableAndDeliveryAddress(){
         Cart c=new Cart();c.add(1,"Menu",100,1);
         assertThrows(IllegalArgumentException.class,()->OrderService.prepare(c,UUID.randomUUID(),"dine_in",null,"","",null,""));
