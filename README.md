@@ -1,4 +1,4 @@
-# RestoFlow Desktop 1.0.0
+# RestoFlow Desktop 1.0.1
 
 Aplikasi JavaFX desktop untuk manajemen restoran: login, dashboard, menu, meja, POS,
 antrean dapur, pembayaran manual, nota/cetak, staf, pengiriman, ulasan, laporan CSV,
@@ -6,10 +6,10 @@ pengaturan restoran, dan hak akses pengguna. Data operasional disimpan di Supaba
 
 ## Membuka aplikasi Windows
 
-Buka `dist/1.0.0/RestoFlow/RestoFlow.exe`. Seluruh folder RestoFlow harus tetap bersama.
+Di folder paket, jalankan `RestoFlow.exe`. Seluruh folder RestoFlow harus tetap bersama.
 Runtime Java disertakan, sehingga penerima paket tidak perlu memasang JDK.
 Paket ini aplikasi portabel, bukan installer wizard. Paket lama 0.1.0 di `dist/RestoFlow`
-adalah fondasi sebelumnya; gunakan versi dalam `dist/1.0.0`.
+adalah fondasi sebelumnya; gunakan versi dalam `dist/1.0.1`.
 
 Pada pembukaan pertama pilih **Atur koneksi database**, masukkan Project URL HTTPS dan
 publishable key dari proyek Supabase, lalu masuk memakai akun yang memiliki profil.
@@ -42,7 +42,7 @@ Jika unduhan gagal, periksa koneksi/proxy dan pesan error lengkap.
 
 `verify` mengompilasi kode, menjalankan tes termasuk render JavaFX dan HTTP loopback,
 lalu menyiapkan JAR/dependency. Pengemasan menjalankan clean verify dan jpackage.
-Hasil executable: `dist/1.0.0/RestoFlow/RestoFlow.exe`.
+Hasil executable: `dist/1.0.1/RestoFlow/RestoFlow.exe`.
 Jika tujuan sudah ada, pindahkan paket lama dahulu; skrip tidak menimpanya otomatis.
 Jangan menjalankan JAR tunggal tanpa dependency. Kemas/bagikan seluruh folder aplikasi.
 
@@ -61,6 +61,8 @@ Jangan menjalankan JAR tunggal tanpa dependency. Kemas/bagikan seluruh folder ap
 Tekan Muat ulang untuk mengambil keadaan terbaru. Semua penyimpanan dikonfirmasi server.
 Jika request timeout, hasil bisa belum diketahui: muat ulang sebelum mengulangi tindakan.
 Pembuatan pesanan memiliki ID permintaan untuk retry yang sama; pembayaran dikunci server.
+Zoom dapat diubah dengan Ctrl + + dan Ctrl + -. Tekan Ctrl + 0 untuk mengembalikan zoom
+ke 100%; batas zoom adalah 80–140%.
 
 ## Konfigurasi dan keamanan
 

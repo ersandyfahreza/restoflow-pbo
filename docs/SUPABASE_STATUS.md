@@ -42,7 +42,7 @@ indeks dipertahankan karena database baru belum memiliki beban operasional.
 
 ## Pemakaian
 
-Tutup aplikasi yang sudah terbuka, lalu buka kembali executable versi 1.0.0.
+Tutup aplikasi yang sudah terbuka, lalu buka kembali executable versi 1.0.1.
 Login dengan akun demo dan password yang disampaikan langsung kepada pengguna.
 Pada komputer ini tidak perlu memasukkan ulang Project URL/key.
 Jika paket dibagikan ke komputer lain, konfigurasikan koneksinya melalui layar aplikasi;

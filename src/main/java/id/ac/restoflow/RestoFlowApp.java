@@ -17,7 +17,6 @@ import java.util.function.Consumer;
 
 public final class RestoFlowApp extends Application {
     private final BorderPane root=new BorderPane();
-    private final Label status=Ui.label("Siap");
     private final ExecutorService worker=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"restoflow-network");t.setDaemon(true);return t;});
     private Stage stage;
     private SupabaseClient client;
@@ -42,7 +41,7 @@ public final class RestoFlowApp extends Application {
         }
     }
     private void showLogin() {
-        workspace=null;root.setTop(null);root.setLeft(null);root.setBottom(status);
+        workspace=null;root.setTop(null);root.setLeft(null);root.setBottom(null);
         Label title=Ui.heading("Selamat datang di RestoFlow");title.setId("login-title");
         TextField email=new TextField();email.setPromptText("Email akun Supabase Auth");
         PasswordField password=new PasswordField();password.setPromptText("Password");
@@ -57,7 +56,7 @@ public final class RestoFlowApp extends Application {
             },data->{
                 client=candidate;
                 workspace=new Workspace(stage,new SupabaseRepository(client),this::background,this::logout,data);
-                root.setCenter(workspace.node());status.setText("Terhubung · data berasal dari Supabase");
+                root.setCenter(workspace.node());
             });
         });
         login.getStyleClass().add("primary");login.setDefaultButton(true);
@@ -84,13 +83,13 @@ public final class RestoFlowApp extends Application {
         if(dialog.showAndWait().orElse(ButtonType.CANCEL)==Ui.SAVE)showLogin();
     }
     private void logout() {
-        background(()->{try{client.logout();}catch(RuntimeException ignored){}return true;},ignored->{client=null;showLogin();status.setText("Sesi lokal telah dihapus.");});
+        background(()->{try{client.logout();}catch(RuntimeException ignored){}return true;},ignored->{client=null;showLogin();});
     }
     private <T> void background(Callable<T> call,Consumer<T> success,Consumer<Throwable> failure) {
-        root.setDisable(true);status.setText("Memproses…");
+        root.setDisable(true);
         Task<T> task=new Task<>(){@Override protected T call() throws Exception{return call.call();}};
-        task.setOnSucceeded(e->{root.setDisable(false);status.setText("Siap");try{success.accept(task.getValue());}catch(RuntimeException ex){Ui.error(ex.getMessage());}});
-        task.setOnFailed(e->{root.setDisable(false);status.setText("Permintaan belum berhasil. Data layar mungkin belum terbaru.");failure.accept(task.getException());});
+        task.setOnSucceeded(e->{root.setDisable(false);try{success.accept(task.getValue());}catch(RuntimeException ex){Ui.error(ex.getMessage());}});
+        task.setOnFailed(e->{root.setDisable(false);failure.accept(task.getException());});
         worker.execute(task);
     }
     private <T> void background(Callable<T> call,Consumer<T> success) {background(call,success,error->Ui.error(error.getMessage()));}

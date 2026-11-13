@@ -7,6 +7,8 @@ import id.ac.restoflow.repository.RestaurantRepository;
 import id.ac.restoflow.service.*;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -30,13 +32,15 @@ public final class Workspace {
     private final Runnable logout;
     private final BorderPane root=new BorderPane();
     private final DatePicker from=new DatePicker(Ui.today().minusDays(90)),to=new DatePicker(Ui.today());
-    private final Label message=Ui.label("");
+    private final Map<String,Button> navButtons=new LinkedHashMap<>();
+    private int zoomPercent=100;
     private JsonNode data;
     private String page;
     private PosView pos;
 
     public Workspace(Stage stage,RestaurantRepository repository,Async async,Runnable logout,JsonNode initial) {
         this.stage=stage;this.repository=repository;this.async=async;this.logout=logout;this.data=initial;
+        root.addEventFilter(KeyEvent.KEY_PRESSED,this::zoomShortcut);
         page=switch(role()){case "kitchen"->"Dapur";case "courier"->"Pengiriman";case "waiter"->"POS";default->"Dashboard";};
         shell();show(page);
     }
@@ -44,8 +48,16 @@ public final class Workspace {
     private String role(){return data.path("profile").path("role").asText();}
     private boolean allowed(String... roles){return Arrays.asList(roles).contains(role());}
     private void shell(){
-        VBox navigation=new VBox(8);navigation.getStyleClass().add("sidebar");navigation.setPrefWidth(205);
-        Label brand=Ui.heading("RestoFlow");navigation.getChildren().addAll(brand,Ui.label("DESKTOP · 1.0"));
+        navButtons.clear();
+        VBox navigation=new VBox(6);navigation.getStyleClass().add("sidebar");navigation.setPrefWidth(235);
+        Label brand=Ui.heading("RestoFlow");brand.getStyleClass().add("brand");
+        Label caption=Ui.label("RENTANG DATA · WIB");caption.getStyleClass().add("sidebar-caption");
+        Ui.dateFormat(from);Ui.dateFormat(to);
+        from.setPrefWidth(200);to.setPrefWidth(200);
+        from.setMaxWidth(Double.MAX_VALUE);to.setMaxWidth(Double.MAX_VALUE);
+        Button applyRange=Ui.button("Terapkan rentang",this::refresh);
+        applyRange.getStyleClass().add("sidebar-action");applyRange.setMaxWidth(Double.MAX_VALUE);
+        navigation.getChildren().addAll(brand,caption,from,to,applyRange);
         nav(navigation,"Dashboard","admin","cashier");nav(navigation,"POS","admin","cashier","waiter");
         nav(navigation,"Pesanan","admin","cashier","waiter");nav(navigation,"Dapur","admin","cashier","kitchen");
         nav(navigation,"Menu","admin","cashier","waiter");nav(navigation,"Meja","admin","cashier","waiter");
@@ -53,28 +65,45 @@ public final class Workspace {
         nav(navigation,"Staf","admin","cashier");nav(navigation,"Pengiriman","admin","cashier","courier");
         nav(navigation,"Ulasan","admin","cashier","courier");nav(navigation,"Laporan","admin","cashier");
         nav(navigation,"Pengaturan","admin");nav(navigation,"Akun","admin","cashier","kitchen","waiter","courier");
-        Region spacer=new Region();VBox.setVgrow(spacer,Priority.ALWAYS);navigation.getChildren().addAll(spacer,Ui.button("Keluar",()->{
+        Region spacer=new Region();VBox.setVgrow(spacer,Priority.ALWAYS);
+        Button exit=Ui.button("Keluar",()->{
             if(pos==null||pos.cart.isEmpty()||Ui.confirm("Keranjang belum disimpan. Tetap keluar?"))logout.run();
-        }));
-        ScrollPane navScroll=Ui.scroll(navigation);navScroll.setPrefWidth(205);navScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);root.setLeft(navScroll);
-        Ui.dateFormat(from);Ui.dateFormat(to);
-        from.setPrefWidth(150);to.setPrefWidth(150);
-        HBox filter=new HBox(12,Ui.label("Rentang data (WIB)"),from,Ui.label("sampai"),to,Ui.button("Muat ulang",this::refresh));
-        filter.setPadding(new Insets(15,24,15,24));filter.getStyleClass().add("toolbar");root.setTop(filter);
-        message.setPadding(new Insets(10,24,10,24));root.setBottom(message);
+        });exit.getStyleClass().add("logout-button");
+        Label zoomHint=Ui.label("Zoom: Ctrl + + / Ctrl + - · Ctrl + 0 reset");zoomHint.getStyleClass().add("sidebar-caption");
+        navigation.getChildren().addAll(spacer,zoomHint,exit);
+        ScrollPane navScroll=Ui.scroll(navigation);navScroll.setPrefWidth(235);navScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);root.setLeft(navScroll);
+        root.setTop(null);root.setBottom(null);
+        setZoom(zoomPercent);
     }
-    private void nav(VBox target,String label,String... roles){if(allowed(roles)){Button b=Ui.button(label,()->guard(()->show(label)));b.setMaxWidth(Double.MAX_VALUE);target.getChildren().add(b);}}
+    private void setZoom(int percent){
+        zoomPercent=Math.max(80,Math.min(140,percent));
+        root.setStyle("-fx-font-size: "+(13.0*zoomPercent/100)+"px;");
+    }
+    private void zoomShortcut(KeyEvent event){
+        if(!event.isControlDown())return;
+        switch(event.getCode()){
+            case PLUS,ADD,EQUALS -> setZoom(zoomPercent+10);
+            case MINUS,SUBTRACT -> setZoom(zoomPercent-10);
+            case DIGIT0,NUMPAD0 -> setZoom(100);
+            default -> {return;}
+        }
+        event.consume();
+    }
+    private void nav(VBox target,String label,String... roles){if(allowed(roles)){Button b=Ui.button(label,()->guard(()->show(label)));b.getStyleClass().add("nav-button");b.setMaxWidth(Double.MAX_VALUE);navButtons.put(label,b);target.getChildren().add(b);}}
     private static void guard(Runnable action){try{action.run();}catch(RuntimeException ex){Ui.error(ex.getMessage());}}
     public void refresh(){
         LocalDate start=from.getValue(),end=to.getValue();
         async.run(()->repository.snapshot(start,end),fresh->{
             data=fresh;if(pos!=null&&pos.cart.isEmpty())pos=null;
-            shell();show(page);message.setText("Data diperbarui dari server. "+scope());
-        },error->{message.setText("Gagal memuat ulang — data layar belum terbaru.");Ui.error(error.getMessage());});
+            shell();show(page);
+        },error->Ui.error(error.getMessage()));
     }
-    private String scope(){long total=data.path("order_count").asLong();return "Rentang "+from.getValue()+" – "+to.getValue()+" · "+Math.min(total,2000)+" / "+total+" pesanan ditampilkan"+(total>2000?". Persempit tanggal untuk rincian lengkap.":"");}
     public void show(String page){
-        this.page=page;message.setText(scope());
+        this.page=page;
+        navButtons.forEach((name,button)->{
+            if(name.equals(page)){if(!button.getStyleClass().contains("active"))button.getStyleClass().add("active");}
+            else button.getStyleClass().remove("active");
+        });
         Node content=switch(page){
             case "Dashboard"->dashboard();case "POS"->pos();case "Pesanan"->orders(false);case "Dapur"->orders(true);
             case "Menu"->menus();case "Meja"->tables();case "Pembayaran"->payments(false);case "Nota"->payments(true);
@@ -83,13 +112,13 @@ public final class Workspace {
         root.setCenter(content);
     }
     private void mutation(String action,ObjectNode payload,Consumer<JsonNode> after){
-        async.run(()->repository.execute(action,payload),result->{message.setText("Tersimpan di server.");after.accept(result);refresh();},error->Ui.error(error.getMessage()));
+        async.run(()->repository.execute(action,payload),result->{after.accept(result);refresh();},error->Ui.error(error.getMessage()));
     }
     private Node page(String title,String help,Ui.DataTable table,Node... actions){
-        FlowPane bar=new FlowPane(10,10,actions);VBox p=Ui.page(Ui.heading(title),Ui.label(help),bar,table.node);VBox.setVgrow(table.node,Priority.ALWAYS);return p;
+        FlowPane bar=new FlowPane(8,8,actions);VBox p=Ui.page(Ui.heading(title),Ui.label(help),bar,table.node);VBox.setVgrow(table.node,Priority.ALWAYS);return p;
     }
     private Node dashboard(){
-        JsonNode s=data.path("stats");FlowPane metrics=new FlowPane(18,18,
+        JsonNode s=data.path("stats");FlowPane metrics=new FlowPane(12,12,
             metric("Pendapatan lunas",Ui.money(s.path("revenue").asLong())),metric("Periode sebelumnya",Ui.money(s.path("previous_revenue").asLong())),metric("Total pesanan",""+s.path("orders").asLong()),
             metric("Pesanan aktif",""+s.path("active").asLong()),metric("Pembayaran pending",""+s.path("pending").asLong()));
         var rows=Ui.rows(data,"orders").stream().filter(n->!Set.of("Selesai","Dibatalkan").contains(n.path("status").asText())).toList();
@@ -101,7 +130,7 @@ public final class Workspace {
         VBox p=Ui.page(Ui.heading("Dashboard"),Ui.label("Pendapatan hanya pembayaran Lunas dan pesanan tidak dibatalkan. Metrik utama dihitung server untuk seluruh rentang."),metrics,
             Ui.label("Menu terlaris pada rincian yang dimuat: "+top),Ui.heading("Antrean aktif"),active.node);VBox.setVgrow(active.node,Priority.ALWAYS);return p;
     }
-    private Node metric(String title,String value){VBox v=new VBox(8,Ui.label(title),Ui.heading(value));v.getStyleClass().add("card");v.setPadding(new Insets(18));v.setMinWidth(185);return v;}
+    private Node metric(String title,String value){Label caption=Ui.label(title);caption.getStyleClass().add("muted");Label amount=Ui.heading(value);amount.getStyleClass().add("metric-value");VBox v=new VBox(5,caption,amount);v.getStyleClass().add("card");v.setPadding(new Insets(14));v.setMinWidth(185);return v;}
     private Node pos(){
         if(pos==null)pos=new PosView(data,p->guard(()->{
             if(p.cart.isEmpty())throw new IllegalArgumentException("Keranjang kosong.");
@@ -109,7 +138,7 @@ public final class Workspace {
             if(p.editingId==null){
                 ObjectNode payload=OrderService.prepare(p.cart,p.requestId,p.type.getValue(),Ui.integerChoice(p.table),p.notes.getText(),p.address.getText(),Ui.integerChoice(p.kitchen),Ui.stringChoice(p.waiter));
                 async.run(()->repository.execute("create_order",payload),
-                    result->{p.reset();page="Pesanan";message.setText("Pesanan #"+result.path("id").asText()+" tersimpan.");refresh();},error->Ui.error(error.getMessage()));
+                    result->{p.reset();page="Pesanan";refresh();},error->Ui.error(error.getMessage()));
             }else{
                 ObjectNode payload=Json.object().put("id",p.editingId).put("type",p.type.getValue()).put("notes",p.notes.getText())
                     .put("address",p.address.getText()).put("waiter",Ui.stringChoice(p.waiter));
@@ -335,7 +364,7 @@ public final class Workspace {
         });
     }
     private Node account(){return Ui.page(Ui.heading("Akun saya"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
-        Ui.label("Versi 1.0.0 · JavaFX Desktop · IDR · Asia/Jakarta"),Ui.label("Hak akses diperiksa oleh server. Perubahan peran dilakukan admin lain. Sesi dihapus saat keluar dan tidak ditulis ke disk."));}
+        Ui.label("Versi 1.0.1 · JavaFX Desktop · IDR · Asia/Jakarta"),Ui.label("Hak akses diperiksa oleh server. Perubahan peran dilakukan admin lain. Sesi dihapus saat keluar dan tidak ditulis ke disk."));}
     private static String value(JsonNode n,String key){return n==null||n.path(key).isNull()?"":n.path(key).asText("");}
     private static CheckBox active(JsonNode row){CheckBox box=new CheckBox("Aktif");box.setSelected(row==null||row.path("is_active").asBoolean());return box;}
     private static String required(TextField field){String value=field.getText().trim();if(value.isBlank())throw new IllegalArgumentException("Kolom wajib belum diisi.");return value;}
@@ -346,12 +375,12 @@ public final class Workspace {
             event.consume();guard(()->{
                 ObjectNode body=payload.get();if(action.equals("pay")&&!Ui.confirm("Konfirmasi bahwa pembayaran sudah benar-benar diterima?"))return;
                 dialog.getDialogPane().setDisable(true);
-                async.run(()->repository.execute(action,body),result->{dialog.close();message.setText("Tersimpan di server.");refresh();},error->{dialog.getDialogPane().setDisable(false);Ui.error(error.getMessage());});
+                async.run(()->repository.execute(action,body),result->{dialog.close();refresh();},error->{dialog.getDialogPane().setDisable(false);Ui.error(error.getMessage());});
             });
         });dialog.showAndWait();
     }
     private void saveText(String suggested,String text){
         FileChooser chooser=new FileChooser();chooser.setTitle("Simpan hasil");chooser.setInitialFileName(suggested);var file=chooser.showSaveDialog(stage);if(file==null)return;
-        try{Files.writeString(file.toPath(),text,StandardCharsets.UTF_8);message.setText("Disimpan: "+file.getName());}catch(Exception ex){Ui.error("Berkas tidak dapat disimpan. Periksa izin folder.");}
+        try{Files.writeString(file.toPath(),text,StandardCharsets.UTF_8);}catch(Exception ex){Ui.error("Berkas tidak dapat disimpan. Periksa izin folder.");}
     }
 }

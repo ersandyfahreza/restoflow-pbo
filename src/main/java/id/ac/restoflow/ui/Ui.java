@@ -50,7 +50,7 @@ public final class Ui {
         Alert a=new Alert(Alert.AlertType.CONFIRMATION,message,ButtonType.OK,ButtonType.CANCEL);a.setHeaderText("Konfirmasi");
         return a.showAndWait().orElse(ButtonType.CANCEL)==ButtonType.OK;
     }
-    public static VBox page(Node... nodes) { VBox p=new VBox(16,nodes);p.setPadding(new Insets(24));return p; }
+    public static VBox page(Node... nodes) { VBox p=new VBox(12,nodes);p.setPadding(new Insets(18));return p; }
     public static ScrollPane scroll(Node node) { ScrollPane s=new ScrollPane(node);s.setFitToWidth(true);return s; }
     public static Column col(String title,String key) { return new Column(title,n->text(n,key)); }
     public static List<JsonNode> rows(JsonNode data,String key) {
@@ -76,7 +76,7 @@ public final class Ui {
         catch(NumberFormatException ex) { throw new IllegalArgumentException("Masukkan nominal rupiah bulat tanpa titik/koma dan tidak negatif."); }
     }
     public static GridPane form() {
-        GridPane g=new GridPane();g.setHgap(16);g.setVgap(12);
+        GridPane g=new GridPane();g.setHgap(12);g.setVgap(8);
         ColumnConstraints labels=new ColumnConstraints(120,135,180),inputs=new ColumnConstraints(140,320,Double.MAX_VALUE);
         inputs.setHgrow(Priority.ALWAYS);g.getColumnConstraints().addAll(labels,inputs);return g;
     }
@@ -89,27 +89,26 @@ public final class Ui {
         public final VBox node;
         public final TextField search=new TextField();
         private final List<JsonNode> source;
-        private final Pagination pages=new Pagination();
         private final Label count=label("");
         public DataTable(List<JsonNode> source,Column... cols) {
             this.source=source;
             for(Column c:cols) {
-                TableColumn<JsonNode,String> column=new TableColumn<>(c.title());column.setPrefWidth(160);
+                TableColumn<JsonNode,String> column=new TableColumn<>(c.title());column.setMinWidth(80);column.setPrefWidth(160);
                 column.setCellValueFactory(v->new ReadOnlyStringWrapper(c.value().apply(v.getValue())));table.getColumns().add(column);
             }
+            table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             table.setPlaceholder(label("Tidak ada data sesuai filter."));table.setPrefHeight(440);
             search.setPromptText("Cari nama, nomor, status, atau catatan...");
-            pages.setMaxPageIndicatorCount(7);pages.currentPageIndexProperty().addListener((obs,a,b)->filter(false));
-            search.textProperty().addListener((obs,a,b)->filter(true));
-            node=new VBox(10,search,count,table,pages);VBox.setVgrow(table,Priority.ALWAYS);filter(true);
+            search.getStyleClass().add("table-search");
+            search.textProperty().addListener((obs,a,b)->filter());
+            count.getStyleClass().add("table-count");
+            node=new VBox(8,search,count,table);
+            VBox.setVgrow(table,Priority.ALWAYS);filter();
         }
-        private void filter(boolean reset) {
+        private void filter() {
             String q=search.getText().toLowerCase(Locale.ROOT).trim();
             List<JsonNode> rows=source.stream().filter(n->Json.write(n).toLowerCase(Locale.ROOT).contains(q)).toList();
-            int pageCount=Math.max(1,(rows.size()+19)/20);pages.setPageCount(pageCount);
-            if(reset)pages.setCurrentPageIndex(0);
-            int from=Math.min(rows.size(),pages.getCurrentPageIndex()*20),to=Math.min(rows.size(),from+20);
-            table.setItems(FXCollections.observableArrayList(rows.subList(from,to)));count.setText(rows.size()+" hasil · 20 baris per halaman");
+            table.setItems(FXCollections.observableArrayList(rows));count.setText(rows.size()+" hasil");
         }
         public JsonNode selected() {
             JsonNode n=table.getSelectionModel().getSelectedItem();

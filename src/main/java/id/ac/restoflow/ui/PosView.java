@@ -31,7 +31,8 @@ public final class PosView {
         table.disableProperty().bind(type.valueProperty().isNotEqualTo("dine_in"));
         address.disableProperty().bind(type.valueProperty().isNotEqualTo("delivery"));
         Ui.DataTable menu=new Ui.DataTable(Ui.rows(data,"menu").stream().filter(m->m.path("is_active").asBoolean()).toList(),
-            Ui.col("Menu","nama_menu"),Ui.col("Kategori","category"),new Ui.Column("Harga",n->Ui.money(n.path("harga_satuan").asLong())));
+            Ui.col("MENU","nama_menu"),new Ui.Column("HARGA",n->Ui.money(n.path("harga_satuan").asLong())),Ui.col("KATEGORI","category"));
+        menu.search.setPromptText("Cari nama menu atau kategori...");
         ComboBox<String> category=new ComboBox<>();category.getItems().add("Semua kategori");
         Ui.rows(data,"menu").stream().map(n->n.path("category").asText()).distinct().sorted().forEach(category.getItems()::add);
         category.setValue("Semua kategori");category.setOnAction(e->menu.search.setText("Semua kategori".equals(category.getValue())?"":category.getValue()));
@@ -40,12 +41,19 @@ public final class PosView {
             try { JsonNode m=menu.selected();cart.add(m.path("id_menu").asInt(),m.path("nama_menu").asText(),m.path("harga_satuan").asLong(),qty.getValue());refreshCart(); }
             catch(RuntimeException ex){Ui.error(ex.getMessage());}
         });
-        VBox left=new VBox(12,Ui.heading("Pilih menu"),category,menu.node,new HBox(10,qty,add));VBox.setVgrow(menu.node,Priority.ALWAYS);
-        for(String title:new String[]{"Menu","Jumlah","Subtotal"}){
-            TableColumn<Cart.Item,String> c=new TableColumn<>(title);c.setPrefWidth(title.equals("Menu")?180:100);
-            c.setCellValueFactory(v->new ReadOnlyStringWrapper(switch(title){case "Menu"->v.getValue().name();case "Jumlah"->""+v.getValue().quantity();default->Ui.money(v.getValue().subtotal());}));cartTable.getColumns().add(c);
+        category.setMaxWidth(Double.MAX_VALUE);
+        add.getStyleClass().add("primary");
+        VBox left=new VBox(8,Ui.heading("PILIH MENU"),
+            Ui.label("Harga akhir diperiksa kembali oleh server. Dapur dan pelayan dipilih berpasangan atau dikosongkan."),
+            category,menu.node,new HBox(8,qty,add));
+        left.getStyleClass().add("pos-panel");VBox.setVgrow(menu.node,Priority.ALWAYS);
+        for(String title:new String[]{"MENU","HARGA","JUMLAH","SUBTOTAL"}){
+            TableColumn<Cart.Item,String> c=new TableColumn<>(title);c.setMinWidth(title.equals("MENU")?120:80);c.setPrefWidth(title.equals("MENU")?180:110);
+            c.setCellValueFactory(v->new ReadOnlyStringWrapper(switch(title){case "MENU"->v.getValue().name();case "HARGA"->Ui.money(v.getValue().price());case "JUMLAH"->""+v.getValue().quantity();default->Ui.money(v.getValue().subtotal());}));
+            cartTable.getColumns().add(c);
         }
-        cartTable.setPlaceholder(Ui.label("Belum ada item."));cartTable.setPrefHeight(210);
+        cartTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        cartTable.setPlaceholder(Ui.label("Keranjang masih kosong."));cartTable.setPrefHeight(190);cartTable.setMinHeight(120);
         Button remove=Ui.button("Hapus item",()->{var item=cartTable.getSelectionModel().getSelectedItem();if(item!=null){cart.remove(item.menuId());refreshCart();}});
         GridPane fields=Ui.form();Ui.field(fields,0,"Jenis pesanan",type);Ui.field(fields,1,"Meja",table);
         Ui.field(fields,2,"Catatan",notes);Ui.field(fields,3,"Alamat delivery",address);
@@ -54,9 +62,22 @@ public final class PosView {
         Button clear=Ui.button("Pesanan baru",()->{if(cart.isEmpty()||Ui.confirm("Kosongkan keranjang? Jika penyimpanan sebelumnya mengalami timeout, periksa daftar pesanan dahulu."))reset();});
         Button decrease=Ui.button("−1",()->{var item=cartTable.getSelectionModel().getSelectedItem();if(item!=null){cart.decrement(item.menuId());refreshCart();}});
         Button increase=Ui.button("+1",()->{var item=cartTable.getSelectionModel().getSelectedItem();if(item!=null)try{cart.add(item.menuId(),item.name(),item.price(),1);refreshCart();}catch(RuntimeException ex){Ui.error(ex.getMessage());}});
-        VBox right=new VBox(12,Ui.heading("Keranjang"),cartTable,new HBox(10,decrease,increase,remove),total,new HBox(12,submit,clear),fields);
-        SplitPane split=new SplitPane(left,Ui.scroll(right));split.setDividerPositions(.51);VBox.setVgrow(split,Priority.ALWAYS);
-        node=Ui.page(Ui.heading("POS / Pemesanan"),Ui.label("Harga akhir diperiksa kembali oleh server. Dapur dan pelayan dipilih berpasangan atau dikosongkan."),split);
+        HBox actions=new HBox(8,increase,decrease,remove);
+        TitledPane details=new TitledPane("Detail pesanan",fields);details.setExpanded(true);
+        VBox orderContent=new VBox(12,cartTable,actions,details);orderContent.setPadding(new javafx.geometry.Insets(0,4,8,0));
+        ScrollPane orderScroll=Ui.scroll(orderContent);orderScroll.setFitToWidth(true);orderScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        VBox orderHeader=new VBox(4,Ui.heading("PEMESANAN"),Ui.label("Total pesanan yang akan dipesan oleh pelanggan"));
+        BorderPane right=new BorderPane();right.setTop(orderHeader);right.setCenter(orderScroll);
+        Region footerSpacer=new Region();HBox.setHgrow(footerSpacer,Priority.ALWAYS);
+        total.getStyleClass().add("order-total");
+        HBox footer=new HBox(10,total,footerSpacer,submit,clear);footer.getStyleClass().add("order-footer");right.setBottom(footer);
+        right.getStyleClass().add("pos-panel");
+        HBox panels=new HBox(24,left,right);HBox.setHgrow(left,Priority.ALWAYS);HBox.setHgrow(right,Priority.ALWAYS);
+        left.setMinWidth(0);right.setMinWidth(0);left.setMaxWidth(Double.MAX_VALUE);right.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(menu.node,Priority.ALWAYS);
+        panels.getStyleClass().add("pos-layout");
+        node=Ui.page(panels);
+        VBox.setVgrow(panels,Priority.ALWAYS);
         refreshCart();
     }
     public Node node(){return node;}

@@ -1,6 +1,6 @@
-# Hasil pengujian RestoFlow 1.0.0
+# Hasil pengujian RestoFlow 1.0.1
 
-12 November 2026, Windows x64, Temurin JDK 17.0.19, JavaFX 17.0.19.
+13 November 2026, Windows x64, Temurin JDK 17.0.19, JavaFX 17.0.19.
 
 ## Build dan Java
 
@@ -16,8 +16,11 @@
 - 4 bisnis: checkout wajib meja/alamat, server sebagai sumber harga, CSV aman dari formula,
   nota data lama dan penanda belum lunas.
 - 1 render JavaFX: seluruh 14 layar navigasi terbentuk; gambar Dashboard/POS/Pengiriman
-  disimpan di target/ui dan diperiksa secara visual. Data fixture hanya berada di src/test,
-  tidak menjadi fallback pada executable.
+  disimpan di target/ui dan diperiksa secara visual. Kontrol zoom diuji pada 80–140%,
+  termasuk pintasan keyboard dan pembesaran font. Footer status dan pagination tidak muncul
+  di halaman operasional. Layout POS dua kolom dengan font Poppins, tabel berlebar responsif,
+  dan daftar semua menu tanpa pagination diuji. Data fixture hanya berada di src/test, tidak
+  menjadi fallback pada executable.
 
 ## Database PostgreSQL sungguhan
 
@@ -47,7 +50,7 @@ bukan database alternatif untuk data operasional aplikasi.
 
 ## Executable
 
-jpackage berhasil membuat dist/1.0.0/RestoFlow/RestoFlow.exe beserta runtime Java.
+jpackage berhasil membuat dist/1.0.1/RestoFlow/RestoFlow.exe beserta runtime Java.
 Startup paket dengan --smoke-test menghasilkan UI_SMOKE_OK dan exit code 0.
 JavaFX pada distribusi menggunakan module-path dan tidak mengeluarkan warning unnamed
 module. Pengujian JUnit GUI berbasis classpath masih mencetak warning tersebut; tesnya lulus.
