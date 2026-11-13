@@ -36,18 +36,20 @@ public final class Ui {
     }
     static { MONEY.setMaximumFractionDigits(0); }
     public static String money(long value) { return MONEY.format(value); }
-    public static String text(JsonNode n,String key) { return n.path(key).isNull()?"—":n.path(key).asText("—"); }
+    public static String text(JsonNode n,String key) { return n.path(key).isNull()?"Belum diisi":n.path(key).asText("Belum diisi"); }
     public static String time(JsonNode n) {
         try { return DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm",Locale.forLanguageTag("id-ID"))
                 .withZone(ZoneId.of("Asia/Jakarta")).format(Instant.parse(n.asText())); }
-        catch(RuntimeException ex) { return "—"; }
+        catch(RuntimeException ex) { return "Waktu tidak tersedia"; }
     }
     public static Label label(String text) { Label l=new Label(text);l.setWrapText(true);return l; }
     public static Label heading(String text) { Label l=label(text);l.getStyleClass().add("page-title");return l; }
     public static Button button(String title,Runnable action) { Button b=new Button(title);b.setOnAction(e->action.run());return b; }
-    public static void error(String message) { Alert a=new Alert(Alert.AlertType.ERROR,message,ButtonType.OK);a.setHeaderText("Tindakan belum berhasil");a.showAndWait(); }
+    public static void styleDialog(Dialog<?> dialog){dialog.getDialogPane().getStylesheets().add(Ui.class.getResource("/styles/app.css").toExternalForm());}
+    public static void error(String message) { Alert a=new Alert(Alert.AlertType.ERROR,message,ButtonType.OK);a.setHeaderText("Tindakan belum berhasil");styleDialog(a);a.showAndWait(); }
     public static boolean confirm(String message) {
         Alert a=new Alert(Alert.AlertType.CONFIRMATION,message,ButtonType.OK,ButtonType.CANCEL);a.setHeaderText("Konfirmasi");
+        styleDialog(a);
         return a.showAndWait().orElse(ButtonType.CANCEL)==ButtonType.OK;
     }
     public static VBox page(Node... nodes) { VBox p=new VBox(12,nodes);p.setPadding(new Insets(18));return p; }
@@ -89,6 +91,8 @@ public final class Ui {
         public final VBox node;
         public final TextField search=new TextField();
         private final List<JsonNode> source;
+        private java.util.function.Predicate<JsonNode> rowFilter=row->true;
+        public void setRowFilter(java.util.function.Predicate<JsonNode> predicate){rowFilter=predicate;filter();}
         private final Label count=label("");
         public DataTable(List<JsonNode> source,Column... cols) {
             this.source=source;
@@ -97,9 +101,11 @@ public final class Ui {
                 column.setCellValueFactory(v->new ReadOnlyStringWrapper(c.value().apply(v.getValue())));table.getColumns().add(column);
             }
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-            table.setPlaceholder(label("Tidak ada data sesuai filter."));table.setPrefHeight(440);
+            table.setPlaceholder(label(source.isEmpty()?"Belum ada data. Periksa rentang tanggal atau tambahkan data sesuai hak akses.":"Tidak ada hasil. Ubah atau kosongkan pencarian."));table.setPrefHeight(440);
+            table.setAccessibleText("Daftar data. Pilih baris untuk menjalankan tindakan.");
             search.setPromptText("Cari nama, nomor, status, atau catatan...");
             search.getStyleClass().add("table-search");
+            search.setAccessibleText("Cari pada daftar data");
             search.textProperty().addListener((obs,a,b)->filter());
             count.getStyleClass().add("table-count");
             node=new VBox(8,search,count,table);
@@ -107,8 +113,8 @@ public final class Ui {
         }
         private void filter() {
             String q=search.getText().toLowerCase(Locale.ROOT).trim();
-            List<JsonNode> rows=source.stream().filter(n->Json.write(n).toLowerCase(Locale.ROOT).contains(q)).toList();
-            table.setItems(FXCollections.observableArrayList(rows));count.setText(rows.size()+" hasil");
+            List<JsonNode> rows=source.stream().filter(rowFilter).filter(n->Json.write(n).toLowerCase(Locale.ROOT).contains(q)).toList();
+            table.setItems(FXCollections.observableArrayList(rows));count.setText(rows.size()+" dari "+source.size()+" data yang dimuat");
         }
         public JsonNode selected() {
             JsonNode n=table.getSelectionModel().getSelectedItem();

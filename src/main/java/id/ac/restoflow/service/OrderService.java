@@ -8,6 +8,27 @@ import id.ac.restoflow.repository.RestaurantRepository;
 import java.util.UUID;
 
 public final class OrderService {
+    /** Bantuan UI saja; otorisasi dan state terakhir tetap diperiksa server. */
+    public static String statusBlockReason(JsonNode order,String role,String next){
+        if(order==null)return "Pilih satu pesanan terlebih dahulu.";
+        String current=order.path("status").asText();
+        boolean transition=switch(current){
+            case "Menunggu" -> java.util.Set.of("Diproses","Dibatalkan").contains(next);
+            case "Diproses" -> java.util.Set.of("Siap","Dibatalkan").contains(next);
+            case "Siap" -> java.util.Set.of("Selesai","Dibatalkan").contains(next);
+            default -> false;
+        };
+        if(!transition)return "Status saat ini "+current+". Ikuti urutan Menunggu → Diproses → Siap → Selesai.";
+        if(!java.util.Set.of("admin","cashier","kitchen","waiter").contains(role)
+            ||role.equals("kitchen")&&!java.util.Set.of("Diproses","Siap").contains(next)
+            ||role.equals("waiter")&&!next.equals("Selesai"))return "Peran Anda tidak dapat melakukan tindakan ini.";
+        boolean paid="Lunas".equals(order.path("payment_status").asText());
+        if(next.equals("Dibatalkan")&&paid)return "Pesanan lunas tidak dapat dibatalkan. Refund belum didukung.";
+        if(next.equals("Selesai")&&!paid)return "Selesaikan pembayaran terlebih dahulu.";
+        String delivery=order.path("delivery_status").asText("");
+        if(next.equals("Selesai")&&"delivery".equals(order.path("type").asText())&&!delivery.isBlank()&&!delivery.equals("Terkirim"))return "Konfirmasi pengiriman Terkirim terlebih dahulu.";
+        return "";
+    }
     private final RestaurantRepository repository;
     public OrderService(RestaurantRepository repository) { this.repository = repository; }
 

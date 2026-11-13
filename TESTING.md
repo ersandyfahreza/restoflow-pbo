@@ -1,11 +1,11 @@
-# Hasil pengujian RestoFlow 1.0.1
+# Hasil pengujian RestoFlow 1.0.3
 
 13 November 2026, Windows x64, Temurin JDK 17.0.19, JavaFX 17.0.19.
 
 ## Build dan Java
 
 `./scripts/maven.ps1 verify` menghasilkan BUILD SUCCESS.
-18 pengujian JUnit lulus; 0 failure, 0 error, 0 skipped:
+19 pengujian JUnit lulus; 0 failure, 0 error, 0 skipped:
 
 - 6 konfigurasi: variabel kosong, placeholder, HTTPS origin, key administrator ditolak,
   persistensi konfigurasi dan precedence environment.
@@ -13,14 +13,21 @@
   pengurangan sampai item terhapus.
 - 2 HTTP: password login, refresh sesi pada batas expiry, bearer/API-key, logout,
   dan penyembunyian error internal. Menggunakan HTTP fixture loopback, bukan Supabase live.
-- 4 bisnis: checkout wajib meja/alamat, server sebagai sumber harga, CSV aman dari formula,
+- 5 bisnis: urutan status sesuai server beserta pembayaran/peran/pengiriman,
+  checkout wajib meja/alamat, server sebagai sumber harga, CSV aman dari formula,
   nota data lama dan penanda belum lunas.
-- 1 render JavaFX: seluruh 14 layar navigasi terbentuk; gambar Dashboard/POS/Pengiriman
-  disimpan di target/ui dan diperiksa secara visual. Kontrol zoom diuji pada 80–140%,
-  termasuk pintasan keyboard dan pembesaran font. Footer status dan pagination tidak muncul
-  di halaman operasional. Layout POS dua kolom dengan font Poppins, tabel berlebar responsif,
-  dan daftar semua menu tanpa pagination diuji. Data fixture hanya berada di src/test, tidak
-  menjadi fallback pada executable.
+- 1 skenario integrasi GUI JavaFX: 14 tombol navigasi dijalankan; gambar Dashboard/POS/
+  Pengiriman/login disimpan di target/ui. Layout POS diperiksa pada 1024 × 700 dan
+  1366 × 900, masing-masing zoom 80/100/140%. Tombol simpan diperiksa tetap dalam batas
+  jendela. Klik tambah/kurangi/hapus/reset, filter kategori/pencarian, jumlah, jenis pesanan,
+  konfirmasi batal/setuju, callback simpan, validasi login dan hapus password teruji.
+  Jendela Windows sungguhan diuji minimize, maximize, restore, drag, resize, klik ganda,
+  Ctrl+F11, Alt+F4 dan close guard. Kontrol jendela tetap aktif saat konten dinonaktifkan
+  untuk loading. Rincian bukti dan batas: docs/UI_VERIFICATION.md.
+  Data fixture hanya di src/test; tidak menjadi fallback pada executable.
+  Jalur Catat pembayaran dari Pesanan dan Pembayaran diuji untuk Diproses/Pending:
+  dialog terbuka, nominal awal benar, QRIS mengunci nominal dan Cash membukanya.
+  Dialog dibatalkan tanpa menulis transaksi; Lunas dan edit isi Diproses tetap disabled.
 
 ## Database PostgreSQL sungguhan
 
@@ -50,7 +57,7 @@ bukan database alternatif untuk data operasional aplikasi.
 
 ## Executable
 
-jpackage berhasil membuat dist/1.0.1/RestoFlow/RestoFlow.exe beserta runtime Java.
+jpackage menghasilkan dist/1.0.3/RestoFlow/RestoFlow.exe beserta runtime Java.
 Startup paket dengan --smoke-test menghasilkan UI_SMOKE_OK dan exit code 0.
 JavaFX pada distribusi menggunakan module-path dan tidak mengeluarkan warning unnamed
 module. Pengujian JUnit GUI berbasis classpath masih mencetak warning tersebut; tesnya lulus.

@@ -1,5 +1,29 @@
 # Status konfigurasi Supabase
 
+## Akun kasir demo (13 November 2026)
+
+Akun `kasir@restoflow.test` telah dibuat melalui Auth Admin API dengan email
+dikonfirmasi. Profil `Kasir Demo`, role `cashier`, aktif, tanpa pemetaan dapur/kurir
+atau pelayan. Login password dan pembacaan rf_snapshot memakai key publik serta
+sesi kasir berhasil (65 menu); sesi pengujian kemudian logout. Tidak menulis transaksi
+bisnis. Password acak disimpan hanya di folder pengguna Windows di luar repository;
+password, PAT, administrator key dan token sesi tidak dicatat di sini atau di paket.
+Versi aplikasi tetap 1.0.3.
+
+## Pembaruan kategori 13 November 2026 (versi tetap 1.0.3)
+
+65 menu live telah dikelompokkan: 48 Makanan, 17 Minuman, 0 belum dikategorikan.
+Camilan termasuk Makanan; es cendol/campur/doger/teler termasuk Minuman.
+Perubahan data dicatat di `supabase/data/categorize_menu_1_0_3.sql` dan dijalankan
+dalam satu transaksi dengan pemeriksaan identitas 65 menu, jumlah kategori, serta
+kesamaan seluruh kolom selain category sebelum/sesudah. Tidak ada perubahan schema,
+harga, nama, deskripsi, status aktif, maupun riwayat transaksi. SQL asli tetap utuh.
+Skrip aman dijalankan ulang untuk daftar yang sama, dan menolak kategori berbeda
+yang perlu ditinjau. Tidak ada rebuild atau perubahan versi executable; aplikasi
+membaca kategori terbaru setelah Terapkan rentang atau login ulang.
+
+Catatan di bawah adalah hasil verifikasi sebelumnya.
+
 Tanggal verifikasi: 12 November 2026 (Asia/Jakarta).
 
 - Proyek: ersandyfahreza's Project
