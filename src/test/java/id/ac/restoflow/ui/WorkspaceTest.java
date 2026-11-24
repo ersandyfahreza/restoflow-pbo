@@ -34,6 +34,8 @@ class WorkspaceTest {
             RestaurantRepository repository=new RestaurantRepository(){
                 public JsonNode snapshot(java.time.LocalDate from,java.time.LocalDate to){return fixture;}
                 public JsonNode execute(String action,JsonNode data){throw new AssertionError("Rendering must not write business data");}
+                public JsonNode createStaffAccount(JsonNode profile){throw new AssertionError("Rendering must not create an account");}
+                public void changePassword(String current,String replacement){throw new AssertionError("Rendering must not change the password");}
             };
             Workspace.Async async=new Workspace.Async(){public <T>void run(Callable<T> work,Consumer<T> success,Consumer<Throwable> failure){try{success.accept(work.call());}catch(Exception ex){failure.accept(ex);}}};
             Ui.loadFonts();Stage stage=new Stage();Workspace workspace=new Workspace(stage,repository,async,()->{},fixture);
@@ -48,6 +50,16 @@ class WorkspaceTest {
                     assertNull(workspace.node().getTop(),page);
                     assertNotNull(scene.getRoot().lookup(".sidebar-action"),page);
                     assertNull(scene.getRoot().lookup("#zoom-in"),page);
+                    if(page.equals("Pengaturan")){
+                        Button addAccount=(Button)scene.getRoot().lookupAll(".button").stream()
+                                .filter(node->node instanceof Button b&&b.getText().equals("Tambah akun")).findFirst().orElseThrow();
+                        answerConfirmation(addAccount::fire,javafx.scene.control.ButtonType.CANCEL);
+                    }
+                    if(page.equals("Akun")){
+                        Button change=(Button)scene.lookup("#account-change-password");
+                        assertNotNull(change);
+                        answerConfirmation(change::fire,javafx.scene.control.ButtonType.CANCEL);
+                    }
                     if(page.equals("Dapur")){
                         Button processing=(Button)scene.lookup("#order-status-Diproses"),ready=(Button)scene.lookup("#order-status-Siap"),done=(Button)scene.lookup("#order-status-Selesai");
                         assertTrue(processing.isDisabled());
@@ -165,6 +177,7 @@ class WorkspaceTest {
             TextField email=(TextField)scene.lookup("#login-email");PasswordField password=(PasswordField)scene.lookup("#login-password");
             email.setText(" demo@example.test ");password.setText("temporary");submit.fire();assertEquals(1,calls[0]);assertEquals("",password.getText());
             ((Button)scene.lookup("#login-connection")).fire();assertEquals(1,calls[1]);
+            assertNull(scene.lookup("#login-recovery"));
             screenshot(scene,"Login");
             frame.setBusy(true);assertTrue(content.isDisabled());assertFalse(scene.lookup("#window-minimize").isDisabled());assertTrue(scene.lookup(".activity-status").isVisible());
             frame.setCanClose(()->false);((Button)scene.lookup("#window-close")).fire();assertTrue(s.isShowing());

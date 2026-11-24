@@ -29,9 +29,12 @@ public final class SupabaseClient {
 
     public synchronized void login(String email, String password) {
         clearSession();
-        JsonNode data = request("/auth/v1/token?grant_type=password",
+        acceptSession(passwordGrant(email, password));
+    }
+
+    private JsonNode passwordGrant(String email, String password) {
+        return request("/auth/v1/token?grant_type=password",
                 Json.object().put("email", email.trim()).put("password", password), "");
-        acceptSession(data);
     }
 
     private void acceptSession(JsonNode data) {
@@ -44,14 +47,50 @@ public final class SupabaseClient {
     }
 
     public synchronized JsonNode rpc(String function, JsonNode payload) {
+        if (!function.matches("rf_[a-z_]+")) throw new IllegalArgumentException("Endpoint tidak valid.");
+        return request("/rest/v1/rpc/" + function, payload, authenticatedToken());
+    }
+
+    public synchronized JsonNode createStaffAccount(JsonNode profile) {
+        return request("/functions/v1/provision-staff-account", profile, authenticatedToken());
+    }
+
+    public synchronized void changePassword(String currentPassword, String newPassword) {
+        JsonNode user = request("GET", "/auth/v1/user", null, authenticatedToken());
+        String userId = user.path("id").asText();
+        String email = user.path("email").asText();
+        if (userId.isBlank() || email.isBlank()) throw new IllegalStateException("Identitas akun tidak dapat diperiksa.");
+
+        // Sign in again so older sessions can change their password without an email nonce.
+        JsonNode signedIn = passwordGrant(email, currentPassword);
+        String verifiedToken = signedIn.path("access_token").asText();
+        if (verifiedToken.isBlank()) throw new IllegalStateException("Sesi verifikasi tidak lengkap.");
+        try {
+            if (!userId.equals(signedIn.path("user").path("id").asText())) {
+                throw new IllegalStateException("Identitas akun berubah. Silakan masuk ulang.");
+            }
+            request("PUT", "/auth/v1/user", Json.object().put("password", newPassword)
+                    .put("current_password", currentPassword), verifiedToken);
+        } finally {
+            endSessionQuietly(verifiedToken);
+        }
+        endSessionQuietly(accessToken);
+        clearSession();
+    }
+
+    private void endSessionQuietly(String token) {
+        try { request("/auth/v1/logout?scope=local", Json.object(), token); }
+        catch (RuntimeException ignored) { /* Keep the result of the password update. */ }
+    }
+
+    private String authenticatedToken() {
         if (accessToken.isBlank()) throw new IllegalStateException("Silakan masuk terlebih dahulu.");
         if (!Instant.now().isBefore(expiresAt)) {
             try { acceptSession(request("/auth/v1/token?grant_type=refresh_token",
                     Json.object().put("refresh_token", refreshToken), "")); }
             catch (RuntimeException ex) { clearSession(); throw new IllegalStateException("Sesi berakhir. Silakan masuk ulang."); }
         }
-        if (!function.matches("rf_[a-z_]+")) throw new IllegalArgumentException("Endpoint tidak valid.");
-        return request("/rest/v1/rpc/" + function, payload, accessToken);
+        return accessToken;
     }
 
     public synchronized void logout() {
@@ -64,23 +103,38 @@ public final class SupabaseClient {
     }
 
     private JsonNode request(String path, JsonNode body, String token) {
+        return request("POST", path, body, token);
+    }
+
+    private JsonNode request(String method, String path, JsonNode body, String token) {
         String base = config.url().replaceAll("/+$", "");
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(base + path)).timeout(Duration.ofSeconds(30))
                 .header("apikey", config.publishableKey()).header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(Json.write(body)));
+                .method(method, body == null ? HttpRequest.BodyPublishers.noBody()
+                        : HttpRequest.BodyPublishers.ofString(Json.write(body)));
         if (!token.isBlank()) builder.header("Authorization", "Bearer " + token);
         try {
             HttpResponse<String> response = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
             int status = response.statusCode();
             if (status < 200 || status >= 300) {
-                if (status == 401) throw new IllegalStateException("Email/password salah atau sesi tidak berlaku.");
-                if (status == 403) throw new IllegalStateException("Akun tidak memiliki izin untuk tindakan ini.");
-                if (status == 429) throw new IllegalStateException("Terlalu banyak permintaan. Tunggu sebelum mencoba ulang.");
                 JsonNode error;
                 try { error = Json.read(response.body()); } catch (RuntimeException ex) { error = Json.object(); }
+                String code = error.path("error_code").asText(error.path("code").asText());
+                if (code.equals("invalid_credentials")) throw new IllegalStateException("Email atau kata sandi salah.");
+                if (path.equals("/auth/v1/user")) {
+                    if (code.equals("weak_password")) throw new IllegalStateException("Kata sandi belum memenuhi aturan Supabase. Gunakan kata sandi yang lebih kuat.");
+                    if (code.equals("same_password")) throw new IllegalStateException("Gunakan kata sandi yang berbeda dari kata sandi sebelumnya.");
+                    if (code.equals("current_password_mismatch")) throw new IllegalStateException("Kata sandi lama salah.");
+                }
+                if (status == 401) throw new IllegalStateException("Email/password salah atau sesi tidak berlaku.");
+                if (status == 429) throw new IllegalStateException("Terlalu banyak permintaan. Tunggu sebelum mencoba ulang.");
                 String message = error.path("message").asText("");
                 // Hanya pesan bisnis yang sengaja ditandai server boleh ditampilkan.
                 if (message.startsWith("RF: ")) throw new IllegalStateException(message.substring(4));
+                if (status == 403) throw new IllegalStateException("Akun tidak memiliki izin untuk tindakan ini.");
+                if (status == 404 && path.equals("/functions/v1/provision-staff-account")) {
+                    throw new IllegalStateException("Fitur tambah akun belum diaktifkan di Supabase. Hubungi pengelola proyek.");
+                }
                 if (status == 404) throw new IllegalStateException("API aplikasi belum tersedia. Jalankan migrasi database terlebih dahulu.");
                 throw new IllegalStateException("Permintaan ditolak server (HTTP " + status + "). Periksa data dan konfigurasi database.");
             }

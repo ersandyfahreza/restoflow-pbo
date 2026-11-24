@@ -41,7 +41,7 @@ public final class RestoFlowApp extends Application {
         showLogin();stage.show();
         if(getParameters().getRaw().contains("--smoke-test")) {
             root.applyCss();root.layout();
-            if(scene.lookup("#login-title")==null)throw new IllegalStateException("Layar login tidak terbentuk.");
+            if(scene.lookup("#login-title")==null||scene.lookup("#login-recovery")!=null)throw new IllegalStateException("Layar login tidak sesuai.");
             System.out.println("UI_SMOKE_OK");
             var close=new javafx.animation.PauseTransition(javafx.util.Duration.seconds(2));close.setOnFinished(e->Platform.exit());close.play();
         }

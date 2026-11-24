@@ -1,4 +1,26 @@
-# Hasil pengujian RestoFlow 1.0.3
+# Hasil pengujian RestoFlow
+
+## Tambah akun dan ganti kata sandi — 24 November 2026
+
+- `./scripts/maven.ps1 verify` lulus 20 tes. Build lokal memakai JDK 25 dengan target
+  Java 17 dan JavaFX 17. Tes membuka dialog Tambah akun dan Ganti kata sandi. Tes HTTP lokal
+  memeriksa akses tanpa sesi, penolakan kata sandi lama yang salah, kecocokan identitas akun,
+  permintaan perubahan kata sandi, dan penghapusan sesi setelah selesai.
+- `python scripts/test_database.py` lulus 76 pemeriksaan. Migrasi 006 mencegah nonadmin
+  membuat akun dan mengabaikan metadata yang dapat diubah pengguna. Pembuatan profil dan
+  catatan audit berhasil bersama pada PostgreSQL. Identitas ganda, peran tidak cocok, dan
+  pembuat nonadmin membatalkan transaksi akun. Seluruh data sumber tetap cocok.
+- `node --test supabase/functions/provision-staff-account/index.test.js` lulus 4 tes dengan
+  respons Supabase tiruan. Function memverifikasi sesi dan hak admin serta mewajibkan kata
+  sandi awal. RPC yang memeriksa profil hanya menerima data profil.
+- Paket Windows x64 versi 1.0.4 memuat runtime Java 17.0.19. Uji startup
+  `dist/1.0.4/RestoFlow/RestoFlow.exe --smoke-test` menghasilkan `UI_SMOKE_OK` dan kode keluar 0.
+
+Pembuatan akun dan login dengan kata sandi baru masih perlu diverifikasi di proyek Supabase
+tujuan. Langkah aktivasi dan pengujian ada di
+`docs/SUPABASE_SETUP.md`.
+
+## Hasil sebelumnya
 
 13 November 2026, Windows x64, Temurin JDK 17.0.19, JavaFX 17.0.19.
 

@@ -20,6 +20,7 @@ pada satu waktu dalam urutan ini, menunggu sukses sebelum lanjut:
 3. `supabase/migrations/003_access.sql`
 4. `supabase/migrations/004_application_api.sql`
 5. `supabase/migrations/005_private_api_hardening.sql`
+6. `supabase/migrations/006_staff_accounts.sql`
 
 Dalam paket Windows, file yang sama ada di folder `database/`.
 File 001 mempertahankan seluruh data asli, menghilangkan statement CREATE DATABASE yang
@@ -50,8 +51,9 @@ VALUES ('GANTI_DENGAN_UUID_DARI_AUTH'::uuid, 'Administrator', 'admin', true);
 ```
 
 Placeholder bukan UUID valid sehingga tidak dapat membuat akun secara tidak sengaja.
-Akun tanpa profil aktif ditolak aplikasi. Untuk akun berikutnya, admin membuat akun Auth
-terlebih dahulu, kemudian menambahkan UUID/profil melalui layar Pengaturan di RestoFlow.
+Akun tanpa profil aktif ditolak aplikasi. Untuk akun berikutnya, admin memakai **Tambah akun**
+setelah mengaktifkan fitur di langkah 5. Pengguna Auth yang sudah ada bisa dipasangkan ke
+profil melalui **Hubungkan akun yang sudah ada** di Pengaturan.
 
 - Admin/kasir: tidak perlu identitas staf.
 - Kitchen: hubungkan ke staff_kitchen aktif.
@@ -79,7 +81,43 @@ periksa UUID, status aktif, role, serta pemetaan staf/pelayan. Bila login gagal,
 email/password dan konfirmasi akun pada Auth. Bila koneksi timeout, periksa jaringan dan
 status proyek; periksa data sebelum mengulang penyimpanan yang hasilnya tidak diketahui.
 
-## 5. Uji alur live pertama
+## 5. Aktifkan tambah akun dan uji ganti kata sandi
+
+Pada proyek yang sudah memakai migrasi 001–005, cukup jalankan `006_staff_accounts.sql` di
+SQL Editor. Migrasi membuat profil dan log audit dalam transaksi Supabase Auth yang sama.
+Jika validasi peran, identitas aktif atau keunikan identitas gagal, transaksi dibatalkan.
+
+Dari root source, deploy Edge Function `provision-staff-account` ke proyek yang sama memakai
+Supabase CLI yang sudah login. Ganti `REF_PROYEK_ANDA` dengan referensi proyek yang benar.
+
+```powershell
+supabase functions deploy provision-staff-account --project-ref REF_PROYEK_ANDA
+```
+
+Function memeriksa token di server dan meminta RPC memeriksa profil admin aktif. Admin
+memastikan alamat email milik staf dan menetapkan kata sandi awal agar staf dapat langsung
+masuk. Kata sandi dikirim ke Supabase Auth dan Auth menyimpan hash, yaitu hasil pengacakan
+satu arah. Profil restoran menyimpan nama, peran, dan identitas staf. Variabel
+`SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` tersedia di lingkungan Edge Function Supabase.
+Desktop tetap memakai publishable key dan sesi login pengguna. [Deploy Edge Functions](https://supabase.com/docs/guides/functions/quickstart) · [Variabel server](https://supabase.com/docs/guides/functions/secrets)
+
+Di Dashboard, aktifkan penyedia login email dan nonaktifkan pendaftaran publik jika proyek
+ini khusus untuk RestoFlow. **Akun → Ganti kata sandi** memverifikasi kata sandi lama dengan
+Supabase Auth dan langsung menyimpan kata sandi baru. Alur ini berjalan tanpa kode email.
+Supabase juga menyediakan pengaturan **Require current password** untuk mewajibkan kata sandi
+lama pada permintaan perubahan melalui API. [Keamanan kata sandi Supabase](https://supabase.com/docs/guides/auth/password-security)
+
+Uji dengan membuat akun `kitchen` yang memiliki identitas dapur aktif. Keluar, masuk dengan
+email dan kata sandi awal, lalu pastikan layar **Dapur** terbuka. Pilih **Akun → Ganti kata
+sandi**. Coba sekali dengan kata sandi lama yang salah. Lalu gunakan kata sandi lama yang
+benar dan periksa bahwa masuk kembali hanya berhasil dengan kata sandi baru.
+
+Jika proyek pernah memakai Edge Function `create-staff-account` dari build sebelumnya,
+paket revisi menggunakan `provision-staff-account`. Untuk akun lama yang belum memiliki
+kata sandi yang diketahui staf, pengelola Supabase dapat menetapkan kata sandi awal untuk
+User UID yang sama melalui pengelolaan Auth yang berizin. [API admin Supabase](https://supabase.com/docs/reference/javascript/auth-admin-updateuserbyid)
+
+## 6. Uji alur operasional live
 
 Buat pesanan takeaway sederhana (tidak perlu meja), pindahkan Menunggu → Diproses → Siap,
 catat pembayaran Cash, selesaikan pesanan, lalu buka nota. Muat ulang dan buka ulang aplikasi

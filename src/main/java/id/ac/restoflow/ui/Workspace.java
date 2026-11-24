@@ -382,9 +382,70 @@ public final class Workspace {
         Ui.DataTable profiles=new Ui.DataTable(Ui.rows(data,"profiles"),Ui.col("Nama","display_name"),Ui.col("Peran","role"),Ui.col("User UUID","id"),Ui.col("Staf","id_staff"),Ui.col("Pelayan","id_pelayan"),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
         VBox p=Ui.page(Ui.heading("Pengaturan"),Ui.label("Mata uang IDR · waktu Asia/Jakarta. Pengaturan ini disimpan bersama di database."),fields,
             Ui.button("Simpan pengaturan",()->guard(()->mutation("settings",Json.object().put("name",required(name)).put("footer",footer.getText()),r->{}))),
-            Ui.heading("Hak akses pengguna"),Ui.label("Buat akun email/password melalui Supabase Auth terlebih dahulu, lalu hubungkan UUID-nya di sini. Aplikasi tidak membawa kunci administrator Auth."),
-            new FlowPane(10,10,Ui.button("Tambah profil",()->editProfile(null)),Ui.button("Edit profil",()->guard(()->editProfile(profiles.selected())))),profiles.node);
+            Ui.heading("Hak akses pengguna"),
+            new FlowPane(10,10,Ui.button("Tambah akun",this::createAccount),
+                Ui.button("Hubungkan akun yang sudah ada",()->editProfile(null)),
+                Ui.button("Edit profil",()->guard(()->editProfile(profiles.selected())))),profiles.node);
         return Ui.scroll(p);
+    }
+    private void createAccount() {
+        TextField email = new TextField();
+        TextField name = new TextField();
+        PasswordField password = new PasswordField();
+        PasswordField confirmation = new PasswordField();
+        ComboBox<String> role = new ComboBox<>();
+        role.getItems().addAll("admin", "cashier", "kitchen", "waiter", "courier");
+        role.setValue("cashier");
+        ComboBox<Ui.Choice> identity = new ComboBox<>();
+        GridPane fields = Ui.form();
+        Ui.field(fields, 0, "Email staf", email);
+        Ui.field(fields, 1, "Nama tampilan", name);
+        Ui.field(fields, 2, "Peran", role);
+        Ui.field(fields, 3, "Identitas staf", identity);
+        Ui.field(fields, 4, "Kata sandi awal", password);
+        Ui.field(fields, 5, "Ulangi kata sandi", confirmation);
+        identity.setDisable(true);
+        role.valueProperty().addListener((observable, previous, current) -> {
+            boolean waiter = current.equals("waiter");
+            boolean assigned = waiter || current.equals("kitchen") || current.equals("courier");
+            identity.getItems().clear();
+            identity.setValue(null);
+            identity.setDisable(!assigned);
+            String idKey = waiter ? "id_pelayan" : "id_staff";
+            List<JsonNode> profiles = Ui.rows(data, "profiles");
+            if (assigned) {
+                Set<String> couriers = new HashSet<>();
+                Ui.rows(data, "couriers").forEach(row -> couriers.add(row.path("id_staff").asText()));
+                for (JsonNode row : Ui.rows(data, waiter ? "waiters" : "staff")) {
+                    String id = row.path(idKey).asText();
+                    boolean matches = waiter || (current.equals("kitchen") ? current.equals(row.path("kind").asText()) : couriers.contains(id));
+                    if (matches && row.path("is_active").asBoolean()
+                            && profiles.stream().noneMatch(profile -> profile.path(idKey).asText().equals(id))) {
+                        String caption = waiter ? Ui.text(row, "nama_depan") + " " + Ui.text(row, "nama_belakang") : Ui.text(row, "nama_staff");
+                        identity.getItems().add(new Ui.Choice(id, caption + " · " + id));
+                    }
+                }
+            }
+            identity.setPromptText(assigned && identity.getItems().isEmpty() ? "Tidak ada identitas aktif yang tersedia" : "Pilih identitas");
+        });
+        VBox contents = new VBox(10, fields, Ui.label("Pastikan email milik staf. Berikan kata sandi awal secara pribadi agar staf bisa masuk dan menggantinya di menu Akun."));
+        editor("Tambah akun", contents, () -> {
+            String address = required(email);
+            if (!address.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+") || address.length() > 254) {
+                throw new IllegalArgumentException("Masukkan alamat email staf yang valid.");
+            }
+            String displayName = required(name);
+            if (displayName.codePointCount(0, displayName.length()) > 100) throw new IllegalArgumentException("Nama maksimal 100 karakter.");
+            String selectedRole = role.getValue();
+            ObjectNode profile = Json.object().put("email", address).put("name", displayName).put("role", selectedRole);
+            if (!identity.isDisabled() && identity.getValue() == null) throw new IllegalArgumentException("Pilih identitas staf aktif.");
+            if (selectedRole.equals("waiter")) profile.put("waiter_id", Ui.stringChoice(identity));
+            if (selectedRole.equals("kitchen") || selectedRole.equals("courier")) profile.put("staff_id", Ui.integerChoice(identity));
+            profile.put("password", confirmedPassword(password, confirmation));
+            password.clear();
+            confirmation.clear();
+            return profile;
+        }, repository::createStaffAccount, () -> accountNotice("Akun dibuat. Staf dapat masuk dengan email dan kata sandi awal."));
     }
     private void editProfile(JsonNode row){
         TextField uuid=new TextField(value(row,"id")),name=new TextField(value(row,"display_name"));uuid.setDisable(row!=null);
@@ -397,19 +458,85 @@ public final class Workspace {
             if(Ui.integerChoice(staff)!=null)p.put("staff_id",Ui.integerChoice(staff));p.put("waiter_id",Ui.stringChoice(waiter));return p;
         });
     }
-    private Node account(){return Ui.page(Ui.heading("Akun saya"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
-        Ui.label("Versi 1.0.3 · JavaFX Desktop · IDR · Asia/Jakarta"),Ui.label("Hak akses diperiksa oleh server. Perubahan peran dilakukan admin lain. Sesi dihapus saat keluar dan tidak ditulis ke disk."));}
+    private Node account(){
+        Button change = Ui.button("Ganti kata sandi", this::changePassword);
+        change.setId("account-change-password");
+        return Ui.page(Ui.heading("Akun saya"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
+            change, Ui.label("Versi 1.0.4 · JavaFX Desktop · IDR · Asia/Jakarta"),Ui.label("Hak akses diperiksa oleh server. Perubahan peran dilakukan admin lain. Sesi dihapus saat keluar dan tidak ditulis ke disk."));
+    }
+    private void changePassword() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.initOwner(stage);
+        dialog.setTitle("Ganti kata sandi");
+        Ui.styleDialog(dialog);
+        PasswordField current = new PasswordField();
+        PasswordField password = new PasswordField();
+        PasswordField confirmation = new PasswordField();
+        GridPane fields = Ui.form();
+        Ui.field(fields, 0, "Kata sandi lama", current);
+        Ui.field(fields, 1, "Kata sandi baru", password);
+        Ui.field(fields, 2, "Ulangi kata sandi baru", confirmation);
+        DialogPane pane = dialog.getDialogPane();
+        pane.setContent(Ui.page(fields, Ui.label("Setelah menyimpan, masuk kembali dengan kata sandi baru.")));
+        pane.getButtonTypes().addAll(Ui.SAVE, ButtonType.CANCEL);
+        dialog.setOnCloseRequest(event -> { if (pane.isDisabled()) event.consume(); });
+        pane.lookupButton(Ui.SAVE).addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+            event.consume();
+            guard(() -> {
+                String oldSecret = current.getText();
+                if (oldSecret.isEmpty()) throw new IllegalArgumentException("Masukkan kata sandi lama.");
+                String newSecret = confirmedPassword(password, confirmation);
+                if (oldSecret.equals(newSecret)) throw new IllegalArgumentException("Gunakan kata sandi yang berbeda dari kata sandi lama.");
+                if (hasUnsavedOrder() && !Ui.confirm("Keranjang belum disimpan. Ganti kata sandi dan keluar?")) return;
+                current.clear();
+                password.clear();
+                confirmation.clear();
+                pane.setDisable(true);
+                async.run(() -> { repository.changePassword(oldSecret, newSecret); return true; }, result -> {
+                    pane.setDisable(false);
+                    dialog.close();
+                    accountNotice("Kata sandi berhasil diganti. Silakan masuk kembali dengan kata sandi baru.");
+                    logout.run();
+                }, error -> {
+                    pane.setDisable(false);
+                    Ui.error(error.getMessage());
+                });
+            });
+        });
+        dialog.showAndWait();
+    }
+    private static String confirmedPassword(PasswordField password, PasswordField confirmation) {
+        String secret = password.getText();
+        if (secret.isBlank() || secret.codePointCount(0, secret.length()) < 8) {
+            throw new IllegalArgumentException("Masukkan kata sandi minimal 8 karakter.");
+        }
+        if (!secret.equals(confirmation.getText())) throw new IllegalArgumentException("Kedua kata sandi harus sama.");
+        return secret;
+    }
+    private void accountNotice(String message) {
+        Alert notice = new Alert(Alert.AlertType.INFORMATION, message, ButtonType.OK);
+        notice.initOwner(stage);
+        notice.setHeaderText(null);
+        Ui.styleDialog(notice);
+        notice.showAndWait();
+    }
     private static String value(JsonNode n,String key){return n==null||n.path(key).isNull()?"":n.path(key).asText("");}
     private static CheckBox active(JsonNode row){CheckBox box=new CheckBox("Aktif");box.setSelected(row==null||row.path("is_active").asBoolean());return box;}
     private static String required(TextField field){String value=field.getText().trim();if(value.isBlank())throw new IllegalArgumentException("Kolom wajib belum diisi.");return value;}
     private void editor(String title,Node fields,String action,Supplier<ObjectNode> payload){
+        editor(title,fields,()->{
+            ObjectNode body=payload.get();
+            return action.equals("pay")&&!Ui.confirm("Konfirmasi bahwa pembayaran sudah benar-benar diterima?")?null:body;
+        },body->repository.execute(action,body),()->{});
+    }
+    private void editor(String title,Node fields,Supplier<ObjectNode> payload,Function<JsonNode,JsonNode> save,Runnable afterSave){
         Dialog<Void> dialog=new Dialog<>();Ui.styleDialog(dialog);dialog.initOwner(stage);dialog.setTitle(title);dialog.getDialogPane().setPrefWidth(650);
         dialog.getDialogPane().setContent(Ui.scroll(Ui.page(fields)));dialog.getDialogPane().getButtonTypes().addAll(Ui.SAVE,ButtonType.CANCEL);
         dialog.getDialogPane().lookupButton(Ui.SAVE).addEventFilter(javafx.event.ActionEvent.ACTION,event->{
             event.consume();guard(()->{
-                ObjectNode body=payload.get();if(action.equals("pay")&&!Ui.confirm("Konfirmasi bahwa pembayaran sudah benar-benar diterima?"))return;
+                ObjectNode body=payload.get();if(body==null)return;
                 dialog.getDialogPane().setDisable(true);
-                async.run(()->repository.execute(action,body),result->{dialog.close();refresh();},error->{dialog.getDialogPane().setDisable(false);Ui.error(error.getMessage());});
+                async.run(()->save.apply(body),result->{dialog.close();afterSave.run();refresh();},error->{dialog.getDialogPane().setDisable(false);Ui.error(error.getMessage());});
             });
         });dialog.showAndWait();
     }

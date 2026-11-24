@@ -1,10 +1,10 @@
-# RestoFlow Desktop 1.0.3
+# RestoFlow Desktop 1.0.4
 
 Aplikasi JavaFX desktop untuk manajemen restoran: login, dashboard, menu, meja, POS,
 antrean dapur, pembayaran manual, nota/cetak, staf, pengiriman, ulasan, laporan CSV,
 pengaturan restoran, dan hak akses pengguna. Data operasional disimpan di Supabase.
 
-Unduh [paket Windows x64 versi 1.0.3](https://github.com/ersandyfahreza/restoflow-pbo/releases/download/v1.0.3/RestoFlow-1.0.3-Windows-x64.zip)
+Versi sebelumnya tersedia sebagai [paket Windows x64 versi 1.0.3](https://github.com/ersandyfahreza/restoflow-pbo/releases/download/v1.0.3/RestoFlow-1.0.3-Windows-x64.zip)
 melalui [GitHub Releases](https://github.com/ersandyfahreza/restoflow-pbo/releases/tag/v1.0.3).
 Ekstrak seluruh ZIP, lalu jalankan RestoFlow.exe di dalam folder RestoFlow.
 Source versi rilis tersedia pada tag v1.0.3; password dan konfigurasi pribadi tidak disertakan.
@@ -14,7 +14,7 @@ Source versi rilis tersedia pada tag v1.0.3; password dan konfigurasi pribadi ti
 Di folder paket, jalankan `RestoFlow.exe`. Seluruh folder RestoFlow harus tetap bersama.
 Runtime Java disertakan, sehingga penerima paket tidak perlu memasang JDK.
 Paket ini aplikasi portabel, bukan installer wizard. Paket lama 0.1.0 di `dist/RestoFlow`
-adalah fondasi sebelumnya; gunakan versi dalam `dist/1.0.3`.
+adalah fondasi sebelumnya. Gunakan versi dalam `dist/1.0.4` untuk fitur tambah akun dan ganti kata sandi.
 
 Pada pembukaan pertama pilih **Atur koneksi database**, masukkan Project URL HTTPS dan
 publishable key dari proyek Supabase, lalu masuk memakai akun yang memiliki profil.
@@ -47,7 +47,7 @@ Jika unduhan gagal, periksa koneksi/proxy dan pesan error lengkap.
 
 `verify` mengompilasi kode, menjalankan tes termasuk render JavaFX dan HTTP loopback,
 lalu menyiapkan JAR/dependency. Pengemasan menjalankan clean verify dan jpackage.
-Hasil executable: `dist/1.0.3/RestoFlow/RestoFlow.exe`.
+Hasil executable: `dist/1.0.4/RestoFlow/RestoFlow.exe`.
 Jika tujuan sudah ada, pindahkan paket lama dahulu; skrip tidak menimpanya otomatis.
 Jangan menjalankan JAR tunggal tanpa dependency. Kemas/bagikan seluruh folder aplikasi.
 
@@ -93,8 +93,14 @@ Password, access token, dan refresh token hanya di memori. Gunakan logout setela
 Secret/service_role key dan password database tidak boleh dimasukkan ke aplikasi desktop.
 Hak akses ditegakkan oleh RLS dan RPC PostgreSQL, bukan hanya visibilitas tombol.
 
-Admin membuat akun melalui Supabase Auth, lalu memberi profil/peran di Pengaturan.
-Tidak ada pemanggilan Auth Admin API dengan secret key dari desktop.
+Admin membuat akun melalui **Pengaturan → Hak akses pengguna → Tambah akun**. Pilih peran
+dan identitas untuk dapur, pelayan, atau kurir, lalu tetapkan kata sandi awal. Akun yang
+sudah ada di Supabase Auth dapat dihubungkan lewat **Hubungkan akun yang sudah ada**.
+Setelah masuk, buka **Akun → Ganti kata sandi**. Masukkan kata sandi lama, ketik kata sandi
+baru dua kali, lalu simpan. Masuk kembali memakai kata sandi baru. Penggantian berlangsung
+langsung melalui Supabase Auth tanpa kode email. Lihat `docs/SUPABASE_SETUP.md` untuk
+mengaktifkan pembuatan akun staf.
+Edge Function di Supabase memanggil Auth Admin API. Kunci administrator tetap ada di server.
 Koneksi bisnis memerlukan internet; logout saat offline menghapus sesi lokal, tetapi
 pencabutan sesi server memerlukan koneksi. Tidak ada sinkronisasi offline.
 
