@@ -56,9 +56,9 @@ setelah mengaktifkan fitur di langkah 5. Pengguna Auth yang sudah ada bisa dipas
 profil melalui **Hubungkan akun yang sudah ada** di Pengaturan.
 
 - Admin/kasir: tidak perlu identitas staf.
-- Kitchen: hubungkan ke staff_kitchen aktif.
-- Courier: hubungkan ke staff yang terdaftar dalam kurir.
-- Waiter: hubungkan ke ID pelayan aktif.
+- Kitchen: pilih `+ Buat identitas staf dapur baru` atau hubungkan ke `staff_kitchen` aktif yang belum memiliki akun.
+- Courier: pilih `+ Buat identitas kurir baru` atau hubungkan ke `staff` kurir aktif yang belum memiliki akun.
+- Waiter: pilih `+ Buat identitas pelayan baru` (ID pelayan baru disarankan otomatis) atau hubungkan ke ID pelayan aktif.
 
 Pengguna tidak dapat mengubah hak aksesnya sendiri. Admin tidak boleh menurunkan profil
 sendiri melalui aplikasi; admin lain atau SQL Editor mengelola perubahan tersebut.

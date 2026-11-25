@@ -39,17 +39,22 @@ export async function createStaffAccount(request, { url, serviceKey }) {
     }
 
     const profile = { name, role };
+    const createIdentity = input?.create_identity === true;
     if (role === "kitchen" || role === "courier") {
-      if (!Number.isInteger(input.staff_id) || input.staff_id < 1 || input.staff_id > 2147483647) {
+      if (createIdentity && (input.staff_id === undefined || input.staff_id === null)) {
+        profile.create_identity = true;
+      } else if (!Number.isInteger(input.staff_id) || input.staff_id < 1 || input.staff_id > 2147483647) {
         return error(400, "Pilih identitas staf aktif.");
+      } else {
+        profile.staff_id = input.staff_id;
       }
-      profile.staff_id = input.staff_id;
     }
     if (role === "waiter") {
-      if (typeof input.waiter_id !== "string" || !input.waiter_id.trim() || input.waiter_id.length > 10) {
+      if (typeof input.waiter_id !== "string" || !input.waiter_id.trim() || input.waiter_id.trim().length > 10) {
         return error(400, "Pilih identitas pelayan aktif.");
       }
-      profile.waiter_id = input.waiter_id;
+      profile.waiter_id = input.waiter_id.trim();
+      if (createIdentity) profile.create_identity = true;
     }
 
     // This RPC also verifies that the provisioning migration is installed before calling Auth Admin.
@@ -73,10 +78,14 @@ export async function createStaffAccount(request, { url, serviceKey }) {
     });
     const user = await created.json().catch(() => null);
     const code = user?.error_code ?? user?.code;
-    if (code === "email_exists" || code === "user_already_exists") {
+    const rawMessage = typeof user?.msg === "string" ? user.msg : (typeof user?.message === "string" ? user.message : "");
+    if (code === "email_exists" || code === "user_already_exists"
+        || (created.status === 422 && /already|exists|registered/i.test(rawMessage))) {
       return error(409, "Email sudah digunakan. Untuk akun Auth yang sudah ada, gunakan Hubungkan akun yang sudah ada.");
     }
     if (code === "weak_password") return error(400, "Kata sandi awal belum memenuhi aturan Supabase. Gunakan kata sandi yang lebih kuat.");
+    const rfMatch = rawMessage.match(/RF:\s*[^\n"]+/);
+    if (rfMatch) return Response.json({ message: rfMatch[0] }, { status: 400 });
     if (!created.ok || !user?.id) {
       return error(502, "Supabase tidak mengonfirmasi pembuatan akun. Muat ulang daftar akun sebelum mencoba lagi.");
     }

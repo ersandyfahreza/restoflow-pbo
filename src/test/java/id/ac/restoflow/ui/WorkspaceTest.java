@@ -53,7 +53,34 @@ class WorkspaceTest {
                     if(page.equals("Pengaturan")){
                         Button addAccount=(Button)scene.getRoot().lookupAll(".button").stream()
                                 .filter(node->node instanceof Button b&&b.getText().equals("Tambah akun")).findFirst().orElseThrow();
-                        answerConfirmation(addAccount::fire,javafx.scene.control.ButtonType.CANCEL);
+                        FutureTask<Void> checkAddDialog=new FutureTask<>(()->{
+                            var dialogWindow=javafx.stage.Window.getWindows().stream().filter(w->w.isShowing()&&w.getScene().getRoot() instanceof javafx.scene.control.DialogPane).findFirst().orElseThrow();
+                            var pane=(javafx.scene.control.DialogPane)dialogWindow.getScene().getRoot();
+                            try{
+                                @SuppressWarnings("unchecked") var roleBox=(javafx.scene.control.ComboBox<String>)pane.lookup("#account-role");
+                                @SuppressWarnings("unchecked") var identityBox=(javafx.scene.control.ComboBox<Ui.Choice>)pane.lookup("#account-identity");
+                                TextField nameField=(TextField)pane.lookup("#account-name");
+                                TextField waiterIdField=(TextField)pane.lookup("#account-waiter-id");
+                                assertEquals("cashier",roleBox.getValue());
+                                assertTrue(identityBox.isDisabled());
+                                assertTrue(waiterIdField.isDisabled());
+                                roleBox.setValue("kitchen");
+                                assertFalse(identityBox.isDisabled());
+                                assertEquals("__new__",identityBox.getValue().id());
+                                assertTrue(identityBox.getItems().size()>=2);
+                                // Choosing an existing staff member auto-fills the display name
+                                identityBox.setValue(identityBox.getItems().get(1));
+                                assertEquals("Dapur uji",nameField.getText());
+                                // Switching to create-new clears the auto-filled name
+                                identityBox.setValue(identityBox.getItems().get(0));
+                                assertEquals("",nameField.getText());
+                                roleBox.setValue("waiter");
+                                assertFalse(waiterIdField.isDisabled());
+                                assertEquals("PLY-02",waiterIdField.getText());
+                            }finally{((Button)pane.lookupButton(javafx.scene.control.ButtonType.CANCEL)).fire();}
+                            return null;
+                        });
+                        Platform.runLater(checkAddDialog);addAccount.fire();checkAddDialog.get(5,TimeUnit.SECONDS);
                     }
                     if(page.equals("Akun")){
                         Button change=(Button)scene.lookup("#account-change-password");

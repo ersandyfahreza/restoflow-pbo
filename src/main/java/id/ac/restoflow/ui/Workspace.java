@@ -293,11 +293,26 @@ public final class Workspace {
         if(!job.endJob())Ui.error("Printer tidak mengonfirmasi penyelesaian pekerjaan.");
     }
     private Node staff(){
-        Ui.DataTable staff=new Ui.DataTable(Ui.rows(data,"staff"),Ui.col("ID","id_staff"),new Ui.Column("Nama / peran",n->Ui.staff(n).displayLabel()),new Ui.Column("Penugasan aktif dimuat",n->""+workload(n)),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
-        Ui.DataTable waiters=new Ui.DataTable(Ui.rows(data,"waiters"),Ui.col("ID pelayan","id_pelayan"),Ui.col("Nama depan","nama_depan"),Ui.col("Nama belakang","nama_belakang"),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
-        TabPane tabs=new TabPane();Tab a=new Tab("Dapur & kurir",new VBox(12,new FlowPane(10,10,adminButton("Tambah staf",()->editStaff(null,false)),adminButton("Edit staf",()->editStaff(staff.selected(),false))),staff.node));
-        Tab b=new Tab("Pelayan",new VBox(12,new FlowPane(10,10,adminButton("Tambah pelayan",()->editStaff(null,true)),adminButton("Edit pelayan",()->editStaff(waiters.selected(),true))),waiters.node));a.setClosable(false);b.setClosable(false);tabs.getTabs().addAll(a,b);
+        Ui.DataTable staff=new Ui.DataTable(Ui.rows(data,"staff"),Ui.col("ID","id_staff"),new Ui.Column("Nama / peran",n->Ui.staff(n).displayLabel()),new Ui.Column("Akun",n->staffAccountLabel("id_staff",n.path("id_staff").asText())),new Ui.Column("Penugasan aktif dimuat",n->""+workload(n)),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
+        Ui.DataTable waiters=new Ui.DataTable(Ui.rows(data,"waiters"),Ui.col("ID pelayan","id_pelayan"),Ui.col("Nama depan","nama_depan"),Ui.col("Nama belakang","nama_belakang"),new Ui.Column("Akun",n->staffAccountLabel("id_pelayan",n.path("id_pelayan").asText())),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
+        TabPane tabs=new TabPane();Tab a=new Tab("Dapur & kurir",new VBox(12,new FlowPane(10,10,adminButton("Tambah staf",()->editStaff(null,false)),adminButton("Edit staf",()->editStaff(staff.selected(),false)),adminButton("Buat akun staf",()->createAccountForIdentity(staff.selected(),false))),staff.node));
+        Tab b=new Tab("Pelayan",new VBox(12,new FlowPane(10,10,adminButton("Tambah pelayan",()->editStaff(null,true)),adminButton("Edit pelayan",()->editStaff(waiters.selected(),true)),adminButton("Buat akun pelayan",()->createAccountForIdentity(waiters.selected(),true))),waiters.node));a.setClosable(false);b.setClosable(false);tabs.getTabs().addAll(a,b);
         VBox body=Ui.page(Ui.heading("Staf"),Ui.label("Pelayan tetap memiliki identitas terpisah. Arsip mempertahankan data riwayat. Penugasan aktif dapat dilihat pada rincian pesanan/pengiriman."),tabs);VBox.setVgrow(tabs,Priority.ALWAYS);return body;
+    }
+    private String staffAccountLabel(String idKey,String id){
+        return Ui.rows(data,"profiles").stream().filter(p->p.path(idKey).asText().equals(id))
+            .map(p->Ui.text(p,"display_name")+" ("+(p.path("is_active").asBoolean()?"Aktif":"Nonaktif")+")")
+            .findFirst().orElse("Belum ada akun");
+    }
+    private void createAccountForIdentity(JsonNode row,boolean waiter){
+        if(!row.path("is_active").asBoolean())throw new IllegalArgumentException("Aktifkan identitas staf/pelayan terlebih dahulu sebelum membuat akun.");
+        String idKey=waiter?"id_pelayan":"id_staff";
+        String id=row.path(idKey).asText();
+        if(Ui.rows(data,"profiles").stream().anyMatch(p->p.path(idKey).asText().equals(id)))
+            throw new IllegalArgumentException("Identitas ini sudah terhubung ke akun pengguna.");
+        String targetRole=waiter?"waiter":row.path("kind").asText("kitchen");
+        String displayName=waiter?(Ui.text(row,"nama_depan")+" "+Ui.text(row,"nama_belakang")).trim():Ui.text(row,"nama_staff");
+        createAccount(targetRole,id,displayName);
     }
     private void editStaff(JsonNode row,boolean waiter){
         TextField first=new TextField(value(row,"nama_depan")),last=new TextField(value(row,"nama_belakang")),id=new TextField(value(row,"id_pelayan"));id.setDisable(row!=null);
@@ -379,90 +394,380 @@ public final class Workspace {
     private Node settings(){
         TextField name=new TextField(data.path("settings").path("display_name").asText());TextArea footer=new TextArea(data.path("settings").path("receipt_footer").asText());footer.setPrefRowCount(3);
         GridPane fields=Ui.form();Ui.field(fields,0,"Nama restoran",name);Ui.field(fields,1,"Footer nota",footer);
-        Ui.DataTable profiles=new Ui.DataTable(Ui.rows(data,"profiles"),Ui.col("Nama","display_name"),Ui.col("Peran","role"),Ui.col("User UUID","id"),Ui.col("Staf","id_staff"),Ui.col("Pelayan","id_pelayan"),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
         VBox p=Ui.page(Ui.heading("Pengaturan"),Ui.label("Mata uang IDR · waktu Asia/Jakarta. Pengaturan ini disimpan bersama di database."),fields,
             Ui.button("Simpan pengaturan",()->guard(()->mutation("settings",Json.object().put("name",required(name)).put("footer",footer.getText()),r->{}))),
-            Ui.heading("Hak akses pengguna"),
-            new FlowPane(10,10,Ui.button("Tambah akun",this::createAccount),
-                Ui.button("Hubungkan akun yang sudah ada",()->editProfile(null)),
-                Ui.button("Edit profil",()->guard(()->editProfile(profiles.selected())))),profiles.node);
+            userAccessSection());
         return Ui.scroll(p);
     }
+    private VBox userAccessSection(){
+        Ui.DataTable profiles=new Ui.DataTable(Ui.rows(data,"profiles"),Ui.col("Nama","display_name"),Ui.col("Peran","role"),Ui.col("User UUID","id"),Ui.col("Staf","id_staff"),Ui.col("Pelayan","id_pelayan"),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
+        VBox box=new VBox(12,Ui.heading("Hak akses pengguna"),
+            Ui.label("Tambah akun membuat pengguna baru beserta identitas staf bila belum ada. Hubungkan akun dipakai untuk pengguna yang sudah terdaftar di Supabase Auth."),
+            new FlowPane(10,10,Ui.button("Tambah akun",()->createAccount("cashier",null,"")),
+                Ui.button("Hubungkan akun yang sudah ada",()->editProfile(null)),
+                Ui.button("Edit profil",()->guard(()->editProfile(profiles.selected())))),profiles.node);
+        VBox.setVgrow(profiles.node,Priority.ALWAYS);
+        return box;
+    }
+    private static final String NEW_IDENTITY_ID = "__new__";
     private void createAccount() {
+        createAccount("cashier", null, "");
+    }
+    private void createAccount(String initialRole, String initialIdentityId, String initialName) {
         TextField email = new TextField();
-        TextField name = new TextField();
-        PasswordField password = new PasswordField();
-        PasswordField confirmation = new PasswordField();
+        email.setId("account-email");
+        TextField name = new TextField(initialName == null ? "" : initialName);
+        name.setId("account-name");
         ComboBox<String> role = new ComboBox<>();
+        role.setId("account-role");
         role.getItems().addAll("admin", "cashier", "kitchen", "waiter", "courier");
-        role.setValue("cashier");
         ComboBox<Ui.Choice> identity = new ComboBox<>();
+        identity.setId("account-identity");
+        identity.setMaxWidth(Double.MAX_VALUE);
+        TextField waiterIdField = new TextField(nextWaiterId());
+        waiterIdField.setId("account-waiter-id");
+        PasswordField password = new PasswordField();
+        password.setId("account-password");
+        PasswordField confirmation = new PasswordField();
+        confirmation.setId("account-password-confirm");
+
         GridPane fields = Ui.form();
-        Ui.field(fields, 0, "Email staf", email);
-        Ui.field(fields, 1, "Nama tampilan", name);
-        Ui.field(fields, 2, "Peran", role);
-        Ui.field(fields, 3, "Identitas staf", identity);
-        Ui.field(fields, 4, "Kata sandi awal", password);
-        Ui.field(fields, 5, "Ulangi kata sandi", confirmation);
-        identity.setDisable(true);
+        Ui.field(fields, 0, "Peran", role);
+        Ui.field(fields, 1, "Identitas staf", identity);
+        Ui.field(fields, 2, "ID pelayan baru", waiterIdField);
+        Ui.field(fields, 3, "Nama tampilan", name);
+        Ui.field(fields, 4, "Email staf", email);
+        Ui.field(fields, 5, "Kata sandi awal", password);
+        Ui.field(fields, 6, "Ulangi kata sandi", confirmation);
+
+        Map<String, String> identityNames = new HashMap<>();
+        String[] lastAutoFilledName = {initialName == null ? "" : initialName};
+        Integer[] createdStaffId = {null};
+        String[] createdStaffRole = {null};
+        String[] createdWaiterId = {null};
+
+        Runnable updateWaiterIdState = () -> {
+            boolean isNewWaiter = "waiter".equals(role.getValue())
+                    && identity.getValue() != null
+                    && NEW_IDENTITY_ID.equals(identity.getValue().id());
+            waiterIdField.setDisable(!isNewWaiter);
+            if (isNewWaiter && waiterIdField.getText().isBlank()) {
+                waiterIdField.setText(nextWaiterId());
+            }
+        };
+
+        identity.valueProperty().addListener((obs, oldChoice, newChoice) -> {
+            updateWaiterIdState.run();
+            if (newChoice == null) return;
+            if (!NEW_IDENTITY_ID.equals(newChoice.id())) {
+                String mappedName = identityNames.getOrDefault(newChoice.id(), "");
+                if (!mappedName.isBlank()) {
+                    name.setText(mappedName);
+                    lastAutoFilledName[0] = mappedName;
+                }
+                if ("waiter".equals(role.getValue())) {
+                    waiterIdField.setText(newChoice.id());
+                }
+            } else {
+                if (name.getText().trim().equals(lastAutoFilledName[0])) {
+                    name.clear();
+                    lastAutoFilledName[0] = "";
+                }
+                if ("waiter".equals(role.getValue())) {
+                    waiterIdField.setText(createdWaiterId[0] != null ? createdWaiterId[0] : nextWaiterId());
+                }
+            }
+        });
+
         role.valueProperty().addListener((observable, previous, current) -> {
+            if (current == null) return;
             boolean waiter = current.equals("waiter");
             boolean assigned = waiter || current.equals("kitchen") || current.equals("courier");
             identity.getItems().clear();
+            identityNames.clear();
             identity.setValue(null);
             identity.setDisable(!assigned);
-            String idKey = waiter ? "id_pelayan" : "id_staff";
-            List<JsonNode> profiles = Ui.rows(data, "profiles");
             if (assigned) {
-                Set<String> couriers = new HashSet<>();
-                Ui.rows(data, "couriers").forEach(row -> couriers.add(row.path("id_staff").asText()));
-                for (JsonNode row : Ui.rows(data, waiter ? "waiters" : "staff")) {
-                    String id = row.path(idKey).asText();
-                    boolean matches = waiter || (current.equals("kitchen") ? current.equals(row.path("kind").asText()) : couriers.contains(id));
-                    if (matches && row.path("is_active").asBoolean()
-                            && profiles.stream().noneMatch(profile -> profile.path(idKey).asText().equals(id))) {
-                        String caption = waiter ? Ui.text(row, "nama_depan") + " " + Ui.text(row, "nama_belakang") : Ui.text(row, "nama_staff");
-                        identity.getItems().add(new Ui.Choice(id, caption + " · " + id));
-                    }
+                String roleLabel = waiter ? "pelayan" : (current.equals("kitchen") ? "staf dapur" : "kurir");
+                Ui.Choice createNewChoice = new Ui.Choice(NEW_IDENTITY_ID, "+ Buat identitas " + roleLabel + " baru");
+                identity.getItems().add(createNewChoice);
+                populateAvailableIdentities(current, null, identity, identityNames);
+                identity.setValue(createNewChoice);
+            } else {
+                if (name.getText().trim().equals(lastAutoFilledName[0])) {
+                    name.clear();
+                    lastAutoFilledName[0] = "";
                 }
             }
-            identity.setPromptText(assigned && identity.getItems().isEmpty() ? "Tidak ada identitas aktif yang tersedia" : "Pilih identitas");
+            identity.setPromptText(assigned ? "Pilih atau buat identitas" : "Tidak memerlukan identitas staf");
+            updateWaiterIdState.run();
         });
-        VBox contents = new VBox(10, fields, Ui.label("Pastikan email milik staf. Berikan kata sandi awal secara pribadi agar staf bisa masuk dan menggantinya di menu Akun."));
+
+        role.setValue(initialRole != null && role.getItems().contains(initialRole) ? initialRole : "cashier");
+        if (initialIdentityId != null && !initialIdentityId.isBlank()) {
+            Ui.select(identity, initialIdentityId);
+        }
+        if (initialName != null && !initialName.isBlank()) {
+            name.setText(initialName);
+            lastAutoFilledName[0] = initialName;
+        }
+
+        VBox contents = new VBox(10, fields, Ui.label("Pilih '+ Buat identitas ... baru' untuk otomatis menambahkan data staf/pelayan baru dari Nama tampilan, atau pilih staf aktif yang sudah ada. Berikan kata sandi awal secara pribadi agar staf bisa masuk dan menggantinya di menu Akun."));
         editor("Tambah akun", contents, () -> {
-            String address = required(email);
+            String address = required(email).toLowerCase(Locale.ROOT);
             if (!address.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+") || address.length() > 254) {
                 throw new IllegalArgumentException("Masukkan alamat email staf yang valid.");
             }
             String displayName = required(name);
-            if (displayName.codePointCount(0, displayName.length()) > 100) throw new IllegalArgumentException("Nama maksimal 100 karakter.");
+            if (displayName.codePointCount(0, displayName.length()) > 100) {
+                throw new IllegalArgumentException("Nama maksimal 100 karakter.");
+            }
             String selectedRole = role.getValue();
             ObjectNode profile = Json.object().put("email", address).put("name", displayName).put("role", selectedRole);
-            if (!identity.isDisabled() && identity.getValue() == null) throw new IllegalArgumentException("Pilih identitas staf aktif.");
-            if (selectedRole.equals("waiter")) profile.put("waiter_id", Ui.stringChoice(identity));
-            if (selectedRole.equals("kitchen") || selectedRole.equals("courier")) profile.put("staff_id", Ui.integerChoice(identity));
+            if (!identity.isDisabled()) {
+                Ui.Choice selectedIdentity = identity.getValue();
+                if (selectedIdentity == null) throw new IllegalArgumentException("Pilih identitas staf aktif atau buat identitas baru.");
+                if (NEW_IDENTITY_ID.equals(selectedIdentity.id())) {
+                    splitPersonName(displayName);
+                    profile.put("create_identity", true);
+                    if ("waiter".equals(selectedRole)) {
+                        String newWaiterId = validateNewWaiterId(required(waiterIdField), createdWaiterId[0]);
+                        profile.put("waiter_id", newWaiterId);
+                    }
+                } else if ("waiter".equals(selectedRole)) {
+                    profile.put("waiter_id", selectedIdentity.id());
+                } else {
+                    profile.put("staff_id", Integer.parseInt(selectedIdentity.id()));
+                }
+            }
             profile.put("password", confirmedPassword(password, confirmation));
+            return profile;
+        }, body -> {
+            ObjectNode requestBody = body.deepCopy();
+            String selectedRole = requestBody.path("role").asText();
+            boolean createNew = requestBody.path("create_identity").asBoolean(false);
+            requestBody.remove("create_identity");
+            if (createNew) {
+                String[] parts = splitPersonName(requestBody.path("name").asText());
+                if ("kitchen".equals(selectedRole) || "courier".equals(selectedRole)) {
+                    if (createdStaffId[0] == null || !selectedRole.equals(createdStaffRole[0])) {
+                        JsonNode saved = repository.execute("save_staff", Json.object()
+                                .put("first", parts[0]).put("last", parts[1])
+                                .put("kind", selectedRole).put("active", true));
+                        createdStaffId[0] = saved.path("id").asInt();
+                        createdStaffRole[0] = selectedRole;
+                    } else {
+                        repository.execute("save_staff", Json.object()
+                                .put("id", createdStaffId[0])
+                                .put("first", parts[0]).put("last", parts[1])
+                                .put("kind", selectedRole).put("active", true));
+                    }
+                    requestBody.put("staff_id", createdStaffId[0]);
+                } else if ("waiter".equals(selectedRole)) {
+                    String targetWaiterId = requestBody.path("waiter_id").asText();
+                    boolean isNewRow = createdWaiterId[0] == null || !createdWaiterId[0].equals(targetWaiterId);
+                    repository.execute("save_waiter", Json.object()
+                            .put("waiter_id", targetWaiterId)
+                            .put("first", parts[0]).put("last", parts[1])
+                            .put("active", true).put("is_new", isNewRow));
+                    createdWaiterId[0] = targetWaiterId;
+                    requestBody.put("waiter_id", targetWaiterId);
+                }
+            }
+            return repository.createStaffAccount(requestBody);
+        }, () -> {
             password.clear();
             confirmation.clear();
-            return profile;
-        }, repository::createStaffAccount, () -> accountNotice("Akun dibuat. Staf dapat masuk dengan email dan kata sandi awal."));
+            accountNotice("Akun dibuat. Staf dapat masuk dengan email dan kata sandi awal.");
+        });
+        if (createdStaffId[0] != null || createdWaiterId[0] != null) {
+            refresh();
+        }
+    }
+    private void populateAvailableIdentities(String selectedRole, String allowProfileId, ComboBox<Ui.Choice> identity, Map<String, String> identityNames) {
+        boolean waiter = "waiter".equals(selectedRole);
+        String idKey = waiter ? "id_pelayan" : "id_staff";
+        List<JsonNode> profiles = Ui.rows(data, "profiles");
+        Set<String> couriers = new HashSet<>();
+        Ui.rows(data, "couriers").forEach(row -> couriers.add(row.path("id_staff").asText()));
+        for (JsonNode row : Ui.rows(data, waiter ? "waiters" : "staff")) {
+            String id = row.path(idKey).asText();
+            boolean matches = waiter || ("kitchen".equals(selectedRole) ? "kitchen".equals(row.path("kind").asText()) : couriers.contains(id));
+            boolean available = profiles.stream().noneMatch(profile ->
+                    profile.path(idKey).asText().equals(id)
+                    && (allowProfileId == null || !profile.path("id").asText().equals(allowProfileId)));
+            if (matches && row.path("is_active").asBoolean() && available) {
+                String caption = waiter
+                        ? (Ui.text(row, "nama_depan") + " " + Ui.text(row, "nama_belakang")).trim()
+                        : Ui.text(row, "nama_staff");
+                identityNames.put(id, caption);
+                identity.getItems().add(new Ui.Choice(id, caption + " · " + id));
+            }
+        }
+    }
+    private String nextWaiterId() {
+        int max = 0;
+        for (JsonNode row : Ui.rows(data, "waiters")) {
+            String id = row.path("id_pelayan").asText("");
+            if (id.matches("PLY-\\d+")) {
+                try { max = Math.max(max, Integer.parseInt(id.substring(4))); }
+                catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format(Locale.ROOT, "PLY-%02d", max + 1);
+    }
+    private String validateNewWaiterId(String waiterId, String alreadyCreatedId) {
+        String cleaned = waiterId.trim();
+        if (cleaned.isEmpty() || cleaned.length() > 10) {
+            throw new IllegalArgumentException("ID pelayan wajib diisi, maksimal 10 karakter.");
+        }
+        boolean existsInWaiters = Ui.rows(data, "waiters").stream()
+                .anyMatch(w -> w.path("id_pelayan").asText().equalsIgnoreCase(cleaned));
+        if (existsInWaiters && (alreadyCreatedId == null || !alreadyCreatedId.equalsIgnoreCase(cleaned))) {
+            throw new IllegalArgumentException("ID pelayan sudah digunakan. Gunakan ID pelayan lain atau pilih pelayan dari daftar.");
+        }
+        return cleaned;
+    }
+    static String[] splitPersonName(String fullName) {
+        String cleaned = fullName == null ? "" : fullName.trim().replaceAll("\\s+", " ");
+        if (cleaned.isEmpty()) throw new IllegalArgumentException("Nama tampilan wajib diisi.");
+        int space = cleaned.indexOf(' ');
+        String first = space < 0 ? cleaned : cleaned.substring(0, space).trim();
+        String last = space < 0 ? "-" : cleaned.substring(space + 1).trim();
+        if (last.isEmpty()) last = "-";
+        if (first.length() > 25) {
+            throw new IllegalArgumentException("Nama depan maksimal 25 karakter.");
+        }
+        if (last.length() > 25) {
+            last = last.substring(0, 25).trim();
+        }
+        return new String[]{first, last};
     }
     private void editProfile(JsonNode row){
+        String currentProfileId = row == null ? null : row.path("id").asText();
+        if (currentProfileId != null && currentProfileId.equals(data.path("profile").path("id").asText())) {
+            throw new IllegalArgumentException("Perubahan profil sendiri dilakukan admin lain agar akses admin tidak terkunci.");
+        }
         TextField uuid=new TextField(value(row,"id")),name=new TextField(value(row,"display_name"));uuid.setDisable(row!=null);
-        ComboBox<String> role=new ComboBox<>(javafx.collections.FXCollections.observableArrayList("admin","cashier","kitchen","waiter","courier"));role.setValue(row==null?"cashier":value(row,"role"));
-        ComboBox<Ui.Choice> staff=Ui.choices(data,"staff","id_staff",n->Ui.text(n,"nama_staff"),true),waiter=Ui.choices(data,"waiters","id_pelayan",n->Ui.text(n,"id_pelayan")+" · "+Ui.text(n,"nama_depan"),true);
-        if(row!=null){Ui.select(staff,row.path("id_staff").asText());Ui.select(waiter,row.path("id_pelayan").asText());}
-        CheckBox active=active(row);GridPane f=Ui.form();Ui.field(f,0,"UUID Auth user",uuid);Ui.field(f,1,"Nama tampilan",name);Ui.field(f,2,"Peran",role);Ui.field(f,3,"Staf dapur/kurir",staff);Ui.field(f,4,"Identitas pelayan",waiter);Ui.field(f,5,"Aktif",active);
-        editor("Profil pengguna",f,"save_profile",()->{
-            UUID.fromString(required(uuid));ObjectNode p=Json.object().put("user_id",uuid.getText().trim()).put("name",required(name)).put("role",role.getValue()).put("active",active.isSelected());
-            if(Ui.integerChoice(staff)!=null)p.put("staff_id",Ui.integerChoice(staff));p.put("waiter_id",Ui.stringChoice(waiter));return p;
+        ComboBox<String> role=new ComboBox<>(javafx.collections.FXCollections.observableArrayList("admin","cashier","kitchen","waiter","courier"));
+        ComboBox<Ui.Choice> identity=new ComboBox<>();identity.setMaxWidth(Double.MAX_VALUE);
+        TextField waiterIdField=new TextField(nextWaiterId());
+        Map<String,String> identityNames=new HashMap<>();
+        String[] lastAutoFilledName={value(row,"display_name")};
+        Integer[] createdStaffId={null};
+        String[] createdStaffRole={null};
+        String[] createdWaiterId={null};
+
+        Runnable updateWaiterField=()->{
+            boolean isNewWaiter="waiter".equals(role.getValue())&&identity.getValue()!=null&&NEW_IDENTITY_ID.equals(identity.getValue().id());
+            waiterIdField.setDisable(!isNewWaiter);
+            if(isNewWaiter&&waiterIdField.getText().isBlank())waiterIdField.setText(nextWaiterId());
+        };
+        identity.valueProperty().addListener((obs,oldChoice,newChoice)->{
+            updateWaiterField.run();
+            if(newChoice==null)return;
+            if(!NEW_IDENTITY_ID.equals(newChoice.id())){
+                String mapped=identityNames.getOrDefault(newChoice.id(),"");
+                if(!mapped.isBlank()&&(name.getText().isBlank()||name.getText().trim().equals(lastAutoFilledName[0]))){
+                    name.setText(mapped);
+                    lastAutoFilledName[0]=mapped;
+                }
+            }
         });
+        role.valueProperty().addListener((obs,prev,current)->{
+            if(current==null)return;
+            boolean waiter="waiter".equals(current);
+            boolean assigned=waiter||"kitchen".equals(current)||"courier".equals(current);
+            identity.getItems().clear();
+            identityNames.clear();
+            identity.setValue(null);
+            identity.setDisable(!assigned);
+            if(assigned){
+                String roleLabel=waiter?"pelayan":("kitchen".equals(current)?"staf dapur":"kurir");
+                Ui.Choice createNew=new Ui.Choice(NEW_IDENTITY_ID,"+ Buat identitas "+roleLabel+" baru");
+                identity.getItems().add(createNew);
+                populateAvailableIdentities(current,currentProfileId,identity,identityNames);
+                if(row!=null){
+                    String existingId=waiter?row.path("id_pelayan").asText(""):row.path("id_staff").asText("");
+                    Ui.select(identity,existingId);
+                }
+                if(identity.getValue()==null)identity.setValue(createNew);
+            }
+            identity.setPromptText(assigned?"Pilih atau buat identitas":"Tidak memerlukan identitas staf");
+            updateWaiterField.run();
+        });
+        role.setValue(row==null?"cashier":value(row,"role"));
+        if(row!=null){
+            name.setText(value(row,"display_name"));
+            lastAutoFilledName[0]=name.getText();
+        }
+        CheckBox active=active(row);GridPane f=Ui.form();
+        Ui.field(f,0,"UUID Auth user",uuid);
+        Ui.field(f,1,"Peran",role);
+        Ui.field(f,2,"Identitas staf",identity);
+        Ui.field(f,3,"ID pelayan baru",waiterIdField);
+        Ui.field(f,4,"Nama tampilan",name);
+        Ui.field(f,5,"Aktif",active);
+        editor("Profil pengguna",f,()->{
+            String rawUuid=required(uuid);
+            try{UUID.fromString(rawUuid);}catch(IllegalArgumentException ex){throw new IllegalArgumentException("Masukkan UUID pengguna Auth yang valid.");}
+            if(rawUuid.equalsIgnoreCase(data.path("profile").path("id").asText()))
+                throw new IllegalArgumentException("Perubahan profil sendiri dilakukan admin lain agar akses admin tidak terkunci.");
+            String displayName=required(name);
+            String selectedRole=role.getValue();
+            ObjectNode p=Json.object().put("user_id",rawUuid).put("name",displayName).put("role",selectedRole).put("active",active.isSelected());
+            if(!identity.isDisabled()){
+                Ui.Choice selectedIdentity=identity.getValue();
+                if(selectedIdentity==null)throw new IllegalArgumentException("Pilih identitas staf aktif atau buat identitas baru.");
+                if(NEW_IDENTITY_ID.equals(selectedIdentity.id())){
+                    splitPersonName(displayName);
+                    p.put("create_identity",true);
+                    if("waiter".equals(selectedRole))p.put("waiter_id",validateNewWaiterId(required(waiterIdField),createdWaiterId[0]));
+                }else if("waiter".equals(selectedRole)){
+                    p.put("waiter_id",selectedIdentity.id());
+                }else{
+                    p.put("staff_id",Integer.parseInt(selectedIdentity.id()));
+                }
+            }
+            return p;
+        },body->{
+            ObjectNode requestBody=body.deepCopy();
+            String selectedRole=requestBody.path("role").asText();
+            boolean createNew=requestBody.path("create_identity").asBoolean(false);
+            requestBody.remove("create_identity");
+            if(createNew){
+                String[] parts=splitPersonName(requestBody.path("name").asText());
+                if("kitchen".equals(selectedRole)||"courier".equals(selectedRole)){
+                    if(createdStaffId[0]==null||!selectedRole.equals(createdStaffRole[0])){
+                        JsonNode saved=repository.execute("save_staff",Json.object().put("first",parts[0]).put("last",parts[1]).put("kind",selectedRole).put("active",true));
+                        createdStaffId[0]=saved.path("id").asInt();
+                        createdStaffRole[0]=selectedRole;
+                    }else{
+                        repository.execute("save_staff",Json.object().put("id",createdStaffId[0]).put("first",parts[0]).put("last",parts[1]).put("kind",selectedRole).put("active",true));
+                    }
+                    requestBody.put("staff_id",createdStaffId[0]);
+                }else if("waiter".equals(selectedRole)){
+                    String targetWaiterId=requestBody.path("waiter_id").asText();
+                    boolean isNewRow=createdWaiterId[0]==null||!createdWaiterId[0].equals(targetWaiterId);
+                    repository.execute("save_waiter",Json.object().put("waiter_id",targetWaiterId).put("first",parts[0]).put("last",parts[1]).put("active",true).put("is_new",isNewRow));
+                    createdWaiterId[0]=targetWaiterId;
+                    requestBody.put("waiter_id",targetWaiterId);
+                }
+            }
+            return repository.execute("save_profile",requestBody);
+        },()->{});
+        if(createdStaffId[0]!=null||createdWaiterId[0]!=null)refresh();
     }
     private Node account(){
         Button change = Ui.button("Ganti kata sandi", this::changePassword);
         change.setId("account-change-password");
-        return Ui.page(Ui.heading("Akun saya"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
-            change, Ui.label("Versi 1.0.4 · JavaFX Desktop · IDR · Asia/Jakarta"),Ui.label("Hak akses diperiksa oleh server. Perubahan peran dilakukan admin lain. Sesi dihapus saat keluar dan tidak ditulis ke disk."));
+        VBox box = Ui.page(Ui.heading("Akun saya"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
+            change, Ui.label("Versi 1.0.5 · JavaFX Desktop · IDR · Asia/Jakarta"),Ui.label("Hak akses diperiksa oleh server. Perubahan peran dilakukan admin lain. Sesi dihapus saat keluar dan tidak ditulis ke disk."));
+        if (allowed("admin")) {
+            box.getChildren().addAll(new Separator(), userAccessSection());
+            return Ui.scroll(box);
+        }
+        return box;
     }
     private void changePassword() {
         Dialog<Void> dialog = new Dialog<>();
@@ -532,11 +837,12 @@ public final class Workspace {
     private void editor(String title,Node fields,Supplier<ObjectNode> payload,Function<JsonNode,JsonNode> save,Runnable afterSave){
         Dialog<Void> dialog=new Dialog<>();Ui.styleDialog(dialog);dialog.initOwner(stage);dialog.setTitle(title);dialog.getDialogPane().setPrefWidth(650);
         dialog.getDialogPane().setContent(Ui.scroll(Ui.page(fields)));dialog.getDialogPane().getButtonTypes().addAll(Ui.SAVE,ButtonType.CANCEL);
+        dialog.setOnCloseRequest(event->{if(dialog.getDialogPane().isDisabled())event.consume();});
         dialog.getDialogPane().lookupButton(Ui.SAVE).addEventFilter(javafx.event.ActionEvent.ACTION,event->{
             event.consume();guard(()->{
                 ObjectNode body=payload.get();if(body==null)return;
                 dialog.getDialogPane().setDisable(true);
-                async.run(()->save.apply(body),result->{dialog.close();afterSave.run();refresh();},error->{dialog.getDialogPane().setDisable(false);Ui.error(error.getMessage());});
+                async.run(()->save.apply(body),result->{dialog.getDialogPane().setDisable(false);dialog.close();afterSave.run();refresh();},error->{dialog.getDialogPane().setDisable(false);Ui.error(error.getMessage());});
             });
         });dialog.showAndWait();
     }

@@ -52,7 +52,46 @@ public final class SupabaseClient {
     }
 
     public synchronized JsonNode createStaffAccount(JsonNode profile) {
-        return request("/functions/v1/provision-staff-account", profile, authenticatedToken());
+        String token = authenticatedToken();
+        try {
+            return request("/functions/v1/provision-staff-account", profile, token);
+        } catch (IllegalStateException ex) {
+            String msg = ex.getMessage() == null ? "" : ex.getMessage();
+            boolean fallbackEligible = !profile.path("email").asText().isBlank()
+                    && !profile.path("password").asText().isBlank()
+                    && (msg.contains("Fitur tambah akun belum diaktifkan")
+                    || msg.contains("Supabase tidak mengonfirmasi pembuatan akun")
+                    || msg.contains("Konfigurasi server pembuatan akun belum lengkap")
+                    || msg.contains("HTTP 502") || msg.contains("HTTP 503") || msg.contains("HTTP 404"));
+            if (!fallbackEligible) throw ex;
+            return signupAndLinkStaffProfile(profile);
+        }
+    }
+
+    private JsonNode signupAndLinkStaffProfile(JsonNode profile) {
+        String email = profile.path("email").asText().trim().toLowerCase( java.util.Locale.ROOT);
+        String password = profile.path("password").asText();
+        JsonNode signup = request("/auth/v1/signup", Json.object().put("email", email).put("password", password), "");
+        String signupToken = signup.path("access_token").asText("");
+        if (!signupToken.isBlank()) endSessionQuietly(signupToken);
+        JsonNode userNode = signup.has("user") && signup.path("user").isObject() ? signup.path("user") : signup;
+        String userId = userNode.path("id").asText("");
+        if (userId.isBlank()) {
+            throw new IllegalStateException("Supabase Auth tidak mengembalikan ID akun baru.");
+        }
+        JsonNode identities = userNode.path("identities");
+        if (identities.isArray() && identities.isEmpty()) {
+            throw new IllegalStateException("Email sudah digunakan. Untuk akun Auth yang sudah ada, gunakan Hubungkan akun yang sudah ada.");
+        }
+        var savePayload = Json.object()
+                .put("user_id", userId)
+                .put("name", profile.path("name").asText())
+                .put("role", profile.path("role").asText())
+                .put("active", true);
+        if (profile.hasNonNull("staff_id")) savePayload.put("staff_id", profile.path("staff_id").asInt());
+        if (profile.hasNonNull("waiter_id")) savePayload.put("waiter_id", profile.path("waiter_id").asText());
+        rpc("rf_execute", Json.object().put("p_action", "save_profile").set("p", savePayload));
+        return Json.object().put("id", userId);
     }
 
     public synchronized void changePassword(String currentPassword, String newPassword) {
@@ -121,7 +160,13 @@ public final class SupabaseClient {
                 try { error = Json.read(response.body()); } catch (RuntimeException ex) { error = Json.object(); }
                 String code = error.path("error_code").asText(error.path("code").asText());
                 if (code.equals("invalid_credentials")) throw new IllegalStateException("Email atau kata sandi salah.");
-                if (path.equals("/auth/v1/user")) {
+                if (code.equals("email_exists") || code.equals("user_already_exists")) {
+                    throw new IllegalStateException("Email sudah digunakan. Untuk akun Auth yang sudah ada, gunakan Hubungkan akun yang sudah ada.");
+                }
+                if (code.equals("signup_disabled") || code.equals("email_provider_disabled")) {
+                    throw new IllegalStateException("Fitur tambah akun belum diaktifkan di Supabase. Deploy Edge Function provision-staff-account atau aktifkan pendaftaran email Auth.");
+                }
+                if (path.equals("/auth/v1/user") || path.equals("/auth/v1/signup")) {
                     if (code.equals("weak_password")) throw new IllegalStateException("Kata sandi belum memenuhi aturan Supabase. Gunakan kata sandi yang lebih kuat.");
                     if (code.equals("same_password")) throw new IllegalStateException("Gunakan kata sandi yang berbeda dari kata sandi sebelumnya.");
                     if (code.equals("current_password_mismatch")) throw new IllegalStateException("Kata sandi lama salah.");

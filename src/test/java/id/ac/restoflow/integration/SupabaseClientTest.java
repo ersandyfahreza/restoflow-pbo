@@ -78,6 +78,51 @@ class SupabaseClientTest {
             assertEquals(1,refreshes.get());client.logout();assertEquals(3,writes.get());assertThrows(IllegalStateException.class,()->client.rpc("rf_snapshot",Json.object()));
         }finally{server.stop(0);}
     }
+    @Test void createStaffAccountFallsBackToSignupAndSaveProfileWhenEdgeFunctionUnavailable() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        List<String> paths = new java.util.concurrent.CopyOnWriteArrayList<>();
+        server.createContext("/", exchange -> {
+            String path = exchange.getRequestURI().toString();
+            paths.add(path);
+            int status = 200;
+            String response = "{}";
+            if (path.contains("grant_type=password")) {
+                response = "{\"access_token\":\"admin-token\",\"refresh_token\":\"admin-refresh\",\"expires_in\":3600}";
+            } else if (path.equals("/functions/v1/provision-staff-account")) {
+                status = 404;
+                response = "{\"message\":\"Not Found\"}";
+            } else if (path.equals("/auth/v1/signup")) {
+                assertNull(exchange.getRequestHeaders().getFirst("Authorization"));
+                response = "{\"access_token\":\"new-user-token\",\"user\":{\"id\":\"11111111-1111-1111-1111-111111111111\",\"identities\":[{\"id\":\"id1\"}]}}";
+            } else if (path.equals("/rest/v1/rpc/rf_execute")) {
+                assertEquals("Bearer admin-token", exchange.getRequestHeaders().getFirst("Authorization"));
+                String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                assertTrue(body.contains("\"save_profile\""));
+                assertTrue(body.contains("\"11111111-1111-1111-1111-111111111111\""));
+                response = "{\"id\":\"11111111-1111-1111-1111-111111111111\"}";
+            }
+            byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(status, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        try {
+            var client = new SupabaseClient(new AppConfig("http://127.0.0.1:" + server.getAddress().getPort(), "sb_publishable_test"), HttpClient.newHttpClient());
+            client.login("admin@example.invalid", "admin-password");
+            var created = client.createStaffAccount(Json.object()
+                    .put("email", "newstaff@example.invalid")
+                    .put("name", "Staf Baru")
+                    .put("role", "kitchen")
+                    .put("staff_id", 1)
+                    .put("password", "InitialPass123!"));
+            assertEquals("11111111-1111-1111-1111-111111111111", created.path("id").asText());
+            assertTrue(paths.contains("/auth/v1/signup"));
+            assertTrue(paths.contains("/rest/v1/rpc/rf_execute"));
+        } finally {
+            server.stop(0);
+        }
+    }
     @Test void backendErrorsDoNotLeakTokensOrSql() throws Exception {
         HttpServer server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         server.createContext("/",e->{byte[] bytes="{\"message\":\"private SQL and secret token\"}".getBytes(StandardCharsets.UTF_8);e.sendResponseHeaders(500,bytes.length);e.getResponseBody().write(bytes);e.close();});server.start();

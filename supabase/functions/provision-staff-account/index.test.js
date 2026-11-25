@@ -54,3 +54,25 @@ test("active admin calls Auth Admin with allowlisted metadata and verified actor
   assert.deepEqual(await response.json(), { id: "new-user" });
   assert.equal(fetch.mock.callCount(), 3);
 });
+
+test("supports creating new staff identity atomically when create_identity is true", async t => {
+  const fetch = t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (url.endsWith("/auth/v1/user")) return Response.json({ id: "actual-user" });
+    if (url.endsWith("/rest/v1/rpc/rf_check_staff_account")) {
+      assert.deepEqual(JSON.parse(options.body), { p: { name: "Dapur Baru", role: "kitchen", create_identity: true } });
+      return Response.json(true);
+    }
+    assert.ok(url.endsWith("/auth/v1/admin/users"));
+    return Response.json({ id: "created-with-new-staff" });
+  });
+  const response = await createStaffAccount(request(userHeaders, {
+    email: "newkitchen@example.test",
+    name: "Dapur Baru",
+    role: "kitchen",
+    create_identity: true,
+    password: "Initial-test-password!",
+  }), config);
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), { id: "created-with-new-staff" });
+  assert.equal(fetch.mock.callCount(), 3);
+});
