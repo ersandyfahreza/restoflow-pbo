@@ -70,9 +70,12 @@ public final class Ui {
         for(JsonNode row:rows(data,table)) if(!activeOnly||row.path("is_active").asBoolean(true)) box.getItems().add(new Choice(row.path(idKey).asText(),caption.apply(row)));
         return box;
     }
-    public static void select(ComboBox<Choice> box,String id) { box.getItems().stream().filter(c->c.id().equals(id)).findFirst().ifPresent(box::setValue); }
-    public static Integer integerChoice(ComboBox<Choice> b) { return b.getValue()==null?null:Integer.valueOf(b.getValue().id()); }
-    public static String stringChoice(ComboBox<Choice> b) { return b.getValue()==null?"":b.getValue().id(); }
+    public static void select(ComboBox<Choice> box,String id) {
+        if(id==null||id.isBlank()){box.setValue(null);return;}
+        box.getItems().stream().filter(c->c.id().equals(id)).findFirst().ifPresent(box::setValue);
+    }
+    public static Integer integerChoice(ComboBox<Choice> b) { return b.getValue()==null||b.getValue().id().isBlank()?null:Integer.valueOf(b.getValue().id()); }
+    public static String stringChoice(ComboBox<Choice> b) { return b.getValue()==null||b.getValue().id().isBlank()?"":b.getValue().id(); }
     public static long amount(TextField field) {
         try { long n=Long.parseLong(field.getText().trim());if(n<0)throw new NumberFormatException();return n; }
         catch(NumberFormatException ex) { throw new IllegalArgumentException("Masukkan nominal rupiah bulat tanpa titik/koma dan tidak negatif."); }
@@ -86,39 +89,147 @@ public final class Ui {
         Label label=label(title);label.setLabelFor(input);form.add(label,0,row);form.add(input,1,row);
         if(input instanceof Region region) region.setMaxWidth(Double.MAX_VALUE);GridPane.setHgrow(input,Priority.ALWAYS);
     }
+    public static HBox passwordBox(PasswordField passwordField) {
+        TextField visibleField = new TextField();
+        visibleField.setPromptText(passwordField.getPromptText());
+        javafx.beans.binding.Bindings.bindBidirectional(visibleField.textProperty(), passwordField.textProperty());
+        visibleField.disableProperty().bind(passwordField.disableProperty());
+        visibleField.setVisible(false);
+        visibleField.setManaged(false);
+        passwordField.setMaxWidth(Double.MAX_VALUE);
+        visibleField.setMaxWidth(Double.MAX_VALUE);
+        StackPane stack = new StackPane(passwordField, visibleField);
+        HBox.setHgrow(stack, Priority.ALWAYS);
+        ToggleButton toggle = new ToggleButton("Lihat");
+        toggle.getStyleClass().add("password-toggle");
+        toggle.setFocusTraversable(false);
+        toggle.setTooltip(new Tooltip("Tampilkan atau sembunyikan kata sandi"));
+        toggle.selectedProperty().addListener((obs, oldVal, show) -> {
+            toggle.setText(show ? "Tutup" : "Lihat");
+            visibleField.setVisible(show);
+            visibleField.setManaged(show);
+            passwordField.setVisible(!show);
+            passwordField.setManaged(!show);
+        });
+        HBox box = new HBox(6, stack, toggle);
+        box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        box.setMaxWidth(Double.MAX_VALUE);
+        return box;
+    }
+    public static <T> void enableMultiSelect(TableView<T> table, ToggleButton multiToggle) {
+        enableMultiSelect(table, multiToggle, null);
+    }
+    public static <T> void enableMultiSelect(TableView<T> table, ToggleButton multiToggle, java.util.function.Consumer<T> doubleClickHandler) {
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.setRowFactory(tv -> {
+            TableRow<T> row = new TableRow<>();
+            row.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, event -> {
+                if (multiToggle != null && multiToggle.isSelected() && !row.isEmpty()
+                        && event.getButton() == javafx.scene.input.MouseButton.PRIMARY
+                        && !event.isShiftDown() && !event.isControlDown() && !event.isMetaDown()) {
+                    int index = row.getIndex();
+                    var sm = table.getSelectionModel();
+                    if (sm.isSelected(index)) sm.clearSelection(index);
+                    else sm.select(index);
+                    table.requestFocus();
+                    event.consume();
+                }
+            });
+            row.setOnMouseClicked(event -> {
+                if (doubleClickHandler != null && !row.isEmpty()
+                        && event.getButton() == javafx.scene.input.MouseButton.PRIMARY
+                        && event.getClickCount() == 2
+                        && (multiToggle == null || !multiToggle.isSelected())) {
+                    doubleClickHandler.accept(row.getItem());
+                }
+            });
+            return row;
+        });
+    }
     public static final class DataTable {
         public final TableView<JsonNode> table=new TableView<>();
         public final VBox node;
         public final TextField search=new TextField();
+        public final Button clearSearch=button("×",search::clear);
+        public final ToggleButton multiSelect=new ToggleButton("Pilih banyak");
+        public final Button selectAll=button("Pilih semua",()->table.getSelectionModel().selectAll());
+        public final Button clearSelection=button("Batal pilih",()->table.getSelectionModel().clearSelection());
         private final List<JsonNode> source;
         private java.util.function.Predicate<JsonNode> rowFilter=row->true;
+        private java.util.function.Consumer<JsonNode> rowDoubleClick;
         public void setRowFilter(java.util.function.Predicate<JsonNode> predicate){rowFilter=predicate;filter();}
+        public void onRowDoubleClick(java.util.function.Consumer<JsonNode> handler){this.rowDoubleClick=handler;}
         private final Label count=label("");
+        private int filteredCount=0;
         public DataTable(List<JsonNode> source,Column... cols) {
             this.source=source;
             for(Column c:cols) {
                 TableColumn<JsonNode,String> column=new TableColumn<>(c.title());column.setMinWidth(80);column.setPrefWidth(160);
                 column.setCellValueFactory(v->new ReadOnlyStringWrapper(c.value().apply(v.getValue())));table.getColumns().add(column);
             }
+            enableMultiSelect(table,multiSelect,item->{if(rowDoubleClick!=null)rowDoubleClick.accept(item);});
+            multiSelect.getStyleClass().add("multi-select-toggle");
+            multiSelect.setTooltip(new Tooltip("Aktifkan agar klik baris memilih atau membatalkan beberapa baris sekaligus tanpa menahan tombol Ctrl."));
+            selectAll.setTooltip(new Tooltip("Pilih seluruh baris yang tampil pada daftar ini."));
+            clearSelection.setTooltip(new Tooltip("Kosongkan seluruh pilihan baris."));
+            clearSelection.setDisable(true);
+            table.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<JsonNode>)change->{
+                updateCountLabel();
+                clearSelection.setDisable(table.getSelectionModel().getSelectedItems().isEmpty());
+            });
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             table.setPlaceholder(label(source.isEmpty()?"Belum ada data. Periksa rentang tanggal atau tambahkan data sesuai hak akses.":"Tidak ada hasil. Ubah atau kosongkan pencarian."));table.setPrefHeight(440);
-            table.setAccessibleText("Daftar data. Pilih baris untuk menjalankan tindakan.");
-            search.setPromptText("Cari nama, nomor, status, atau catatan...");
+            table.setAccessibleText("Daftar data. Pilih satu atau beberapa baris untuk menjalankan tindakan.");
+            search.setPromptText("Cari...");
             search.getStyleClass().add("table-search");
             search.setAccessibleText("Cari pada daftar data");
-            search.textProperty().addListener((obs,a,b)->filter());
+            clearSearch.getStyleClass().add("search-clear-button");
+            clearSearch.setTooltip(new Tooltip("Kosongkan pencarian (Esc)"));
+            clearSearch.setVisible(false);
+            clearSearch.setManaged(false);
+            search.textProperty().addListener((obs,a,b)->{
+                boolean hasText=b!=null&&!b.isEmpty();
+                clearSearch.setVisible(hasText);
+                clearSearch.setManaged(hasText);
+                filter();
+            });
+            search.setOnKeyPressed(e->{
+                if(e.getCode()==javafx.scene.input.KeyCode.ESCAPE){
+                    search.clear();
+                    e.consume();
+                }
+            });
+            HBox.setHgrow(search,Priority.ALWAYS);
+            HBox searchBar=new HBox(6,search,clearSearch);
+            searchBar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
             count.getStyleClass().add("table-count");
-            node=new VBox(8,search,count,table);
+            Region spacer=new Region();HBox.setHgrow(spacer,Priority.ALWAYS);
+            HBox toolbar=new HBox(6,count,spacer,multiSelect,selectAll,clearSelection);
+            toolbar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            node=new VBox(8,searchBar,toolbar,table);
             VBox.setVgrow(table,Priority.ALWAYS);filter();
+        }
+        private void updateCountLabel() {
+            int selected=table.getSelectionModel().getSelectedItems().size();
+            String base=filteredCount+" dari "+source.size()+" data yang dimuat";
+            count.setText(selected>0?base+" · "+selected+" dipilih":base);
         }
         private void filter() {
             String q=search.getText().toLowerCase(Locale.ROOT).trim();
             List<JsonNode> rows=source.stream().filter(rowFilter).filter(n->Json.write(n).toLowerCase(Locale.ROOT).contains(q)).toList();
-            table.setItems(FXCollections.observableArrayList(rows));count.setText(rows.size()+" dari "+source.size()+" data yang dimuat");
+            filteredCount=rows.size();
+            table.setItems(FXCollections.observableArrayList(rows));
+            selectAll.setDisable(rows.isEmpty());
+            updateCountLabel();
         }
         public JsonNode selected() {
             JsonNode n=table.getSelectionModel().getSelectedItem();
-            if(n==null)throw new IllegalArgumentException("Pilih satu baris terlebih dahulu.");return n;
+            if(n==null)throw new IllegalArgumentException("Pilih minimal satu baris terlebih dahulu.");return n;
+        }
+        public List<JsonNode> selectedItems() {
+            List<JsonNode> items=new ArrayList<>(table.getSelectionModel().getSelectedItems().stream().filter(Objects::nonNull).toList());
+            if(items.isEmpty())throw new IllegalArgumentException("Pilih minimal satu baris terlebih dahulu.");
+            return items;
         }
     }
 }

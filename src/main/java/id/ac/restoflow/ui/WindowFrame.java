@@ -27,6 +27,7 @@ public final class WindowFrame extends BorderPane {
     private final Node content;
     private final BooleanProperty busy=new SimpleBooleanProperty();
     private final Label activity=Ui.label("");
+    private final Label purpose=Ui.label("Manajemen restoran");
     private BooleanSupplier canClose=()->true;
     private double pointerX,pointerY,startX,startY,startWidth,startHeight;
     private boolean north,south,east,west,resizing;
@@ -37,7 +38,7 @@ public final class WindowFrame extends BorderPane {
         stage.initStyle(StageStyle.UNDECORATED);stage.setResizable(true);
         getStyleClass().add("window-frame");setPadding(new Insets(1));setCenter(content);
         Label title=Ui.label("RestoFlow");title.getStyleClass().add("window-title");
-        Label purpose=Ui.label("Manajemen restoran");purpose.getStyleClass().add("window-purpose");
+        purpose.getStyleClass().add("window-purpose");
         Region dragSpace=new Region();HBox.setHgrow(dragSpace,Priority.ALWAYS);
         Button minimize=control("window-minimize","\u2212","Minimalkan jendela",()->stage.setIconified(true));
         Button maximize=control("window-maximize","\u25a1","Maksimalkan jendela",this::toggleMaximize);
@@ -82,6 +83,7 @@ public final class WindowFrame extends BorderPane {
         button.getStyleClass().add("window-control");button.setMinSize(46,38);button.setPrefSize(46,38);button.setMaxSize(46,38);return button;
     }
     public void setCanClose(BooleanSupplier canClose){this.canClose=canClose;}
+    public void setSubtitle(String subtitle){purpose.setText(subtitle==null||subtitle.isBlank()?"Manajemen restoran":subtitle);}
     public void setBusy(boolean value){busy.set(value);}
     public boolean isBusy(){return busy.get();}
     public void requestClose(){Event.fireEvent(stage,new WindowEvent(stage,WindowEvent.WINDOW_CLOSE_REQUEST));}

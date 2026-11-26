@@ -42,7 +42,7 @@ class WorkspaceTest {
             WindowFrame window=new WindowFrame(stage,workspace.node());
             Scene scene=new Scene(window,1366,900);scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());stage.setScene(scene);stage.show();
             try{
-                for(String page:new String[]{"Dashboard","POS","Pesanan","Dapur","Menu","Meja","Pembayaran","Nota","Staf","Pengiriman","Ulasan","Laporan","Pengaturan","Akun"}){
+                for(String page:new String[]{"Dashboard","POS","Pesanan","Menu","Meja","Staf","Pengiriman","Ulasan","Laporan","Pengaturan","Akun"}){
                     Button navigation=(Button)scene.getRoot().lookupAll(".nav-button").stream().filter(n->((Button)n).getText().equals(page)).findFirst().orElseThrow();
                     navigation.fire();scene.getRoot().applyCss();scene.getRoot().layout();assertNotNull(workspace.node().getCenter(),page);
                     assertTrue(scene.getRoot().lookupAll(".pagination").isEmpty(),page);
@@ -50,7 +50,7 @@ class WorkspaceTest {
                     assertNull(workspace.node().getTop(),page);
                     assertNotNull(scene.getRoot().lookup(".sidebar-action"),page);
                     assertNull(scene.getRoot().lookup("#zoom-in"),page);
-                    if(page.equals("Pengaturan")){
+                    if(page.equals("Akun")){
                         Button addAccount=(Button)scene.getRoot().lookupAll(".button").stream()
                                 .filter(node->node instanceof Button b&&b.getText().equals("Tambah akun")).findFirst().orElseThrow();
                         FutureTask<Void> checkAddDialog=new FutureTask<>(()->{
@@ -81,30 +81,57 @@ class WorkspaceTest {
                             return null;
                         });
                         Platform.runLater(checkAddDialog);addAccount.fire();checkAddDialog.get(5,TimeUnit.SECONDS);
-                    }
-                    if(page.equals("Akun")){
                         Button change=(Button)scene.lookup("#account-change-password");
                         assertNotNull(change);
                         answerConfirmation(change::fire,javafx.scene.control.ButtonType.CANCEL);
                     }
-                    if(page.equals("Dapur")){
-                        Button processing=(Button)scene.lookup("#order-status-Diproses"),ready=(Button)scene.lookup("#order-status-Siap"),done=(Button)scene.lookup("#order-status-Selesai");
-                        assertTrue(processing.isDisabled());
-                        TableView<?> orders=(TableView<?>)scene.lookup(".table-view");orders.getSelectionModel().selectFirst();
-                        assertTrue(processing.isDisabled());assertTrue(ready.isDisabled());assertTrue(done.isDisabled());
-                        assertTrue(done.getTooltip().getText().contains("Terkirim"));
-                    }
                     if(page.equals("Pesanan")){
                         assertTrue(((Button)scene.lookup("#order-pay")).isDisabled());
+                        assertTrue(((Button)scene.lookup("#order-status-Selesai")).isDisabled());
                         ((TableView<?>)scene.lookup(".table-view")).getSelectionModel().selectFirst();
                         assertTrue(((Button)scene.lookup("#order-pay")).isDisabled());
                         assertTrue(((Button)scene.lookup("#order-edit")).isDisabled());
+                        assertFalse(((Button)scene.lookup("#order-status-Menunggu")).isDisabled());
+                        assertFalse(((Button)scene.lookup("#order-status-Diproses")).isDisabled());
+                        assertFalse(((Button)scene.lookup("#order-status-Siap")).isDisabled());
+                        assertTrue(((Button)scene.lookup("#order-status-Siap")).getStyleClass().contains("stage-current"));
+                        assertNull(scene.lookup("#order-stage-pill-Siap"));
+                        assertFalse(((Button)scene.lookup("#order-status-Selesai")).isDisabled());
+                    }
+                    if(page.equals("Meja")){
+                        Button tile=(Button)scene.lookup("#table-tile-1");
+                        assertNotNull(tile);
+                        assertTrue(tile.getStyleClass().contains("table-tile-available"));
+                        assertNotNull(scene.lookup("#sidebar-autorefresh"));
+                        FutureTask<Void> tableDialogCheck=new FutureTask<>(()->{
+                            var dialogWindow=javafx.stage.Window.getWindows().stream().filter(w->w.isShowing()&&w.getScene().getRoot() instanceof javafx.scene.control.DialogPane).findFirst().orElseThrow();
+                            var pane=(javafx.scene.control.DialogPane)dialogWindow.getScene().getRoot();
+                            try{
+                                TextField nameField=(TextField)pane.lookup("#table-menu-name");
+                                TextField qrField=(TextField)pane.lookup("#table-menu-qr");
+                                javafx.scene.control.CheckBox activeBox=(javafx.scene.control.CheckBox)pane.lookup("#table-menu-active");
+                                Button addOrderBtn=(Button)pane.lookup("#table-menu-add-order");
+                                assertEquals("Meja uji 1",nameField.getText());
+                                assertEquals("QR-TEST-1",qrField.getText());
+                                assertTrue(activeBox.isSelected());
+                                assertNotNull(addOrderBtn);
+                                assertFalse(addOrderBtn.isDisabled());
+                            }finally{((Button)pane.lookupButton(javafx.scene.control.ButtonType.CLOSE)).fire();}
+                            return null;
+                        });
+                        Platform.runLater(tableDialogCheck);tile.fire();tableDialogCheck.get(5,TimeUnit.SECONDS);
                     }
                     if(page.equals("POS")){
                         var tables=scene.getRoot().lookupAll(".table-view");assertEquals(2,tables.size());
                         for(Node table:tables)assertSame(TableView.CONSTRAINED_RESIZE_POLICY,((TableView<?>)table).getColumnResizePolicy());
                         long activeMenus=Ui.rows(fixture,"menu").stream().filter(m->m.path("is_active").asBoolean()).count();
                         assertTrue(tables.stream().map(TableView.class::cast).anyMatch(table->table.getItems().size()==activeMenus));
+                        @SuppressWarnings("unchecked") var posTable=(javafx.scene.control.ComboBox<Ui.Choice>)scene.lookup("#pos-table");
+                        @SuppressWarnings("unchecked") var posKitchen=(javafx.scene.control.ComboBox<Ui.Choice>)scene.lookup("#pos-kitchen");
+                        @SuppressWarnings("unchecked") var posWaiter=(javafx.scene.control.ComboBox<Ui.Choice>)scene.lookup("#pos-waiter");
+                        assertTrue(posTable.getItems().get(0).name().contains("(Tersedia)"));
+                        assertTrue(posKitchen.getItems().get(0).id().isEmpty());
+                        assertTrue(posWaiter.getItems().get(0).id().isEmpty());
                     }
                     if(java.util.Set.of("Dashboard","POS","Pengiriman").contains(page)){
                         var snapshot=scene.getRoot().snapshot(null,null);BufferedImage image=new BufferedImage((int)snapshot.getWidth(),(int)snapshot.getHeight(),BufferedImage.TYPE_INT_ARGB);
@@ -127,11 +154,11 @@ class WorkspaceTest {
                 ((com.fasterxml.jackson.databind.node.ObjectNode)paymentFixture.path("orders").get(0)).put("status","Diproses").put("payment_status","Pending");
                 Workspace paymentWorkspace=new Workspace(stage,repository,async,()->{},paymentFixture);
                 window.setCenter(paymentWorkspace.node());
-                for(String paymentPage:new String[]{"Pesanan","Pembayaran"}){
+                for(String paymentPage:new String[]{"Pesanan"}){
                     paymentWorkspace.show(paymentPage);window.applyCss();window.layout();
                     ((TableView<?>)window.lookup(".table-view")).getSelectionModel().selectFirst();
-                    Button pay=(Button)window.lookup(paymentPage.equals("Pesanan")?"#order-pay":"#payment-pay");assertFalse(pay.isDisabled());
-                    if(paymentPage.equals("Pesanan"))assertTrue(((Button)window.lookup("#order-edit")).isDisabled());
+                    Button pay=(Button)window.lookup("#order-pay");assertFalse(pay.isDisabled());
+                    assertTrue(((Button)window.lookup("#order-edit")).isDisabled());
                     FutureTask<Void> dialogCheck=new FutureTask<>(()->{
                         var dialogWindow=javafx.stage.Window.getWindows().stream().filter(w->w.isShowing()&&w.getScene().getRoot() instanceof javafx.scene.control.DialogPane).findFirst().orElseThrow();
                         var pane=(javafx.scene.control.DialogPane)dialogWindow.getScene().getRoot();
@@ -164,7 +191,20 @@ class WorkspaceTest {
                 var tables=scene.getRoot().lookupAll(".table-view");
                 @SuppressWarnings("unchecked") TableView<JsonNode> menu=(TableView<JsonNode>)tables.stream().filter(n->!"pos-cart".equals(n.getId())).findFirst().orElseThrow();
                 @SuppressWarnings("unchecked") TableView<id.ac.restoflow.domain.Cart.Item> cart=(TableView<id.ac.restoflow.domain.Cart.Item>)scene.lookup("#pos-cart");
-                Button add=(Button)scene.lookup("#pos-add");assertTrue(add.isDisabled());menu.getSelectionModel().selectFirst();assertFalse(add.isDisabled());add.fire();
+                Button add=(Button)scene.lookup("#pos-add");assertTrue(add.isDisabled());
+                assertEquals( javafx.scene.control.SelectionMode.MULTIPLE,menu.getSelectionModel().getSelectionMode());
+                assertEquals( javafx.scene.control.SelectionMode.MULTIPLE,cart.getSelectionModel().getSelectionMode());
+                ((Button)scene.lookup("#pos-menu-selectall")).fire();
+                assertEquals(2,menu.getSelectionModel().getSelectedItems().size());
+                add.fire();
+                assertEquals(2,cart.getItems().size());
+                ((Button)scene.lookup("#pos-cart-selectall")).fire();
+                assertEquals(2,cart.getSelectionModel().getSelectedItems().size());
+                ((Button)scene.lookup("#pos-remove")).fire();
+                assertTrue(cart.getItems().isEmpty());
+                ((Button)scene.lookup("#pos-menu-clearselect")).fire();
+                assertTrue(menu.getSelectionModel().getSelectedItems().isEmpty());
+                menu.getSelectionModel().selectFirst();assertFalse(add.isDisabled());add.fire();
                 assertEquals(1,cart.getItems().size());assertTrue(workspace.hasUnsavedOrder());
                 assertFalse(((Button)scene.lookup("#pos-save")).isDisabled());
                 cart.getSelectionModel().selectFirst();((Button)scene.lookup("#pos-increase")).fire();assertEquals(2,cart.getItems().get(0).quantity());
