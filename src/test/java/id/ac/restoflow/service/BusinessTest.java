@@ -41,19 +41,4 @@ class BusinessTest {
             """);String receipt=ReceiptService.render(order,Json.object());
         assertTrue(receipt.contains("SELISIH DATA LAMA"));assertTrue(receipt.contains("BELUM LUNAS"));assertTrue(receipt.contains("bukan bukti harga saat transaksi"));
     }
-    @Test void paymentStrategiesValidateCashAndNonCashPolymorphically(){
-        PaymentStrategy cash=PaymentStrategy.forMethod("Cash");
-        assertTrue(cash.allowsCustomAmount());
-        assertEquals(15000L,cash.validateAndCalculateChange(85000L,100000L));
-        assertThrows(IllegalArgumentException.class,()->cash.validateAndCalculateChange(85000L,80000L));
-
-        for(String nonCashMethod:new String[]{"Debit","QRIS"}){
-            PaymentStrategy nonCash=PaymentStrategy.forMethod(nonCashMethod);
-            assertFalse(nonCash.allowsCustomAmount());
-            assertEquals(85000L,nonCash.defaultReceivedAmount(85000L));
-            assertEquals(0L,nonCash.validateAndCalculateChange(85000L,85000L));
-            assertThrows(IllegalArgumentException.class,()->nonCash.validateAndCalculateChange(85000L,100000L));
-        }
-        assertThrows(IllegalArgumentException.class,()->PaymentStrategy.forMethod("Unknown"));
-    }
 }

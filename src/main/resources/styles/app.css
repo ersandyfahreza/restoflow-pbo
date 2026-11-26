@@ -19,14 +19,38 @@
 .login-introduction { -fx-font-family: "Rubik"; -fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #23584b; }
 .login-description { -fx-font-size: 14px; }
 .validation-message { -fx-text-fill: #932b2d; }
-.sidebar { -fx-background-color: #e1e7e3; -fx-padding: 16 12; -fx-spacing: 6; -fx-border-color: transparent #c0c9c3 transparent transparent; }
-.brand { -fx-font-family: "Rubik"; -fx-font-size: 1.5em; -fx-padding: 0 8 10 8; }
-.sidebar-caption { -fx-font-size: 0.923em; }
-.sidebar .date-picker { -fx-font-size: 0.923em; }
-.sidebar .nav-button { -fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 7 12; -fx-font-weight: normal; }
-.sidebar .nav-button:hover { -fx-background-color: #cedbd3; }
-.sidebar .nav-button.active { -fx-background-color: #23584b; -fx-text-fill: white; -fx-font-weight: bold; }
-.sidebar .logout-button { -fx-background-color: transparent; -fx-text-fill: #932b2d; }
+.sidebar { -fx-background-color: #f4f7f5; -fx-padding: 16 14; -fx-spacing: 10; -fx-border-color: transparent #cbd4ce transparent transparent; }
+.brand-header { -fx-padding: 2 4 2 4; }
+.brand-icon-box { -fx-background-color: #23584b; -fx-background-radius: 6; -fx-min-width: 30; -fx-min-height: 30; -fx-pref-width: 30; -fx-pref-height: 30; -fx-max-width: 30; -fx-max-height: 30; }
+.brand-icon-box .svg-icon-path { -fx-fill: white; }
+.brand { -fx-font-family: "Rubik"; -fx-font-size: 1.42em; -fx-padding: 0; -fx-text-fill: #173d2c; }
+.role-badge { -fx-background-color: #dfeee5; -fx-border-color: #a9cbb7; -fx-border-radius: 999; -fx-background-radius: 999; -fx-padding: 4 12; }
+.role-badge-dot { -fx-text-fill: #23584b; -fx-font-size: 0.85em; }
+.role-badge-text { -fx-text-fill: #173d2c; -fx-font-weight: bold; -fx-font-size: 0.88em; }
+.sidebar-filter-card { -fx-background-color: #e6ede9; -fx-border-color: #c5d1ca; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; }
+.filter-card-title { -fx-font-weight: bold; -fx-text-fill: #202923; }
+.filter-card-title .svg-icon-path { -fx-fill: #23584b; }
+.sidebar-field-label { -fx-font-size: 0.85em; -fx-text-fill: #415249; }
+.sidebar-caption { -fx-font-size: 0.90em; }
+.sidebar .date-picker { -fx-font-size: 0.90em; }
+.preset-bar { -fx-padding: 2 0; }
+.nav-list { -fx-padding: 2 0; }
+.nav-group-label { -fx-font-size: 0.75em; -fx-font-weight: bold; -fx-text-fill: #526159; -fx-padding: 8 8 2 8; }
+.svg-icon-path { -fx-fill: #526159; }
+.sidebar .nav-button { -fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 8 12; -fx-font-weight: normal; -fx-text-fill: #2c3a32; -fx-background-radius: 6; -fx-border-radius: 0 6 6 0; -fx-border-width: 0 0 0 3.5; -fx-border-color: transparent; }
+.sidebar .nav-button .svg-icon-path { -fx-fill: #526159; }
+.sidebar .nav-button:hover { -fx-background-color: #dce6e0; -fx-text-fill: #173d2c; }
+.sidebar .nav-button:hover .svg-icon-path { -fx-fill: #23584b; }
+.sidebar .nav-button.active { -fx-background-color: #dfeee5; -fx-text-fill: #173d2c; -fx-font-weight: bold; -fx-border-color: transparent transparent transparent #23584b; -fx-border-width: 0 0 0 4; }
+.sidebar .nav-button.active .svg-icon-path { -fx-fill: #23584b; }
+.sidebar-action .svg-icon-path { -fx-fill: white; }
+.sidebar-status-box { -fx-background-color: #e6ede9; -fx-border-color: #c5d1ca; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 10; }
+.sidebar-progress { -fx-pref-height: 6px; -fx-min-height: 6px; -fx-max-height: 6px; }
+.sidebar-progress > .track { -fx-background-color: #cbd6cf; -fx-background-radius: 999; }
+.sidebar-progress > .bar { -fx-background-color: #23584b; -fx-background-radius: 999; -fx-padding: 0; }
+.sidebar .logout-button { -fx-background-color: #f8ecec; -fx-border-color: #dbb8b9; -fx-border-radius: 6; -fx-background-radius: 6; -fx-text-fill: #932b2d; -fx-font-weight: bold; -fx-alignment: center-left; -fx-padding: 8 12; }
+.sidebar .logout-button .svg-icon-path { -fx-fill: #932b2d; }
+.sidebar .logout-button:hover { -fx-background-color: #f1dada; -fx-border-color: #c59596; }
 .button, .toggle-button { -fx-background-color: #dce4df; -fx-text-fill: #202923; -fx-padding: 8 12; -fx-background-radius: 4; -fx-border-radius: 4; -fx-border-color: transparent; -fx-cursor: hand; }
 .button:hover, .toggle-button:hover { -fx-background-color: #c8d8ce; }
 .button:armed, .toggle-button:armed { -fx-background-color: #b7cbbc; }

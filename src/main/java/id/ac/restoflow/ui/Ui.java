@@ -45,6 +45,17 @@ public final class Ui {
     public static Label label(String text) { Label l=new Label(text);l.setWrapText(true);return l; }
     public static Label heading(String text) { Label l=label(text);l.getStyleClass().add("page-title");return l; }
     public static Button button(String title,Runnable action) { Button b=new Button(title);b.setOnAction(e->action.run());return b; }
+    public static Node icon(String svgContent) {
+        javafx.scene.shape.SVGPath path=new javafx.scene.shape.SVGPath();
+        path.setContent(svgContent);
+        path.getStyleClass().add("svg-icon-path");
+        StackPane holder=new StackPane(path);
+        holder.getStyleClass().add("svg-icon-box");
+        holder.setMinSize(18,18);
+        holder.setPrefSize(18,18);
+        holder.setMaxSize(18,18);
+        return holder;
+    }
     public static void styleDialog(Dialog<?> dialog){dialog.getDialogPane().getStylesheets().add(Ui.class.getResource("/styles/app.css").toExternalForm());}
     public static void error(String message) { Alert a=new Alert(Alert.AlertType.ERROR,message,ButtonType.OK);a.setHeaderText("Tindakan belum berhasil");styleDialog(a);a.showAndWait(); }
     public static boolean confirm(String message) {
