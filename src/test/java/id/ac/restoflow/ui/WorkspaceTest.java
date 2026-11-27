@@ -42,7 +42,7 @@ class WorkspaceTest {
             WindowFrame window=new WindowFrame(stage,workspace.node());
             Scene scene=new Scene(window,1366,900);scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());stage.setScene(scene);stage.show();
             try{
-                for(String page:new String[]{"Dashboard","POS","Pesanan","Menu","Meja","Staf","Pengiriman","Ulasan","Laporan","Pengaturan","Akun"}){
+                for(String page:new String[]{"Dashboard","POS","Pesanan","Menu","Meja","Staf","Pengiriman","Ulasan","Laporan","Akun"}){
                     Button navigation=(Button)scene.getRoot().lookupAll(".nav-button").stream().filter(n->((Button)n).getText().equals(page)).findFirst().orElseThrow();
                     navigation.fire();scene.getRoot().applyCss();scene.getRoot().layout();assertNotNull(workspace.node().getCenter(),page);
                     assertTrue(scene.getRoot().lookupAll(".pagination").isEmpty(),page);

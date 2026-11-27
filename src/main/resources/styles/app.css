@@ -19,14 +19,38 @@
 .login-introduction { -fx-font-family: "Rubik"; -fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #23584b; }
 .login-description { -fx-font-size: 14px; }
 .validation-message { -fx-text-fill: #932b2d; }
-.sidebar { -fx-background-color: #e1e7e3; -fx-padding: 16 12; -fx-spacing: 6; -fx-border-color: transparent #c0c9c3 transparent transparent; }
-.brand { -fx-font-family: "Rubik"; -fx-font-size: 1.5em; -fx-padding: 0 8 10 8; }
-.sidebar-caption { -fx-font-size: 0.923em; }
+.sidebar { -fx-background-color: #e1e7e3; -fx-padding: 16 12; -fx-spacing: 8; -fx-border-color: transparent #c0c9c3 transparent transparent; }
+.brand-header { -fx-padding: 2 4 4 4; }
+.brand-icon-box { -fx-background-color: #23584b; -fx-background-radius: 6; -fx-padding: 6; }
+.brand-icon-box .svg-icon-path { -fx-fill: white; }
+.brand { -fx-font-family: "Rubik"; -fx-font-size: 1.45em; -fx-font-weight: bold; -fx-text-fill: #173d2c; -fx-padding: 0; }
+.role-badge { -fx-background-color: #dfeee5; -fx-border-color: #b4d4c0; -fx-border-radius: 999; -fx-background-radius: 999; -fx-padding: 4 12; }
+.role-badge-dot { -fx-background-color: #1f7a4c; -fx-background-radius: 999; }
+.role-badge-text { -fx-text-fill: #173d2c; -fx-font-size: 0.85em; -fx-font-weight: bold; }
+.sidebar-filter-card { -fx-background-color: #eef2ef; -fx-border-color: #cbd4ce; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; }
+.sidebar-filter-title { -fx-font-weight: bold; -fx-text-fill: #30483b; }
+.sidebar-filter-card .svg-icon-path { -fx-fill: #30483b; }
+.sidebar-field-label { -fx-font-size: 0.85em; -fx-text-fill: #46574e; -fx-font-weight: bold; }
+.sidebar-caption { -fx-font-size: 0.88em; }
 .sidebar .date-picker { -fx-font-size: 0.923em; }
-.sidebar .nav-button { -fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 7 12; -fx-font-weight: normal; }
-.sidebar .nav-button:hover { -fx-background-color: #cedbd3; }
-.sidebar .nav-button.active { -fx-background-color: #23584b; -fx-text-fill: white; -fx-font-weight: bold; }
-.sidebar .logout-button { -fx-background-color: transparent; -fx-text-fill: #932b2d; }
+.nav-list { -fx-padding: 2 0; }
+.nav-group-label { -fx-font-size: 0.76em; -fx-font-weight: bold; -fx-text-fill: #526159; -fx-padding: 10 10 3 10; }
+.svg-icon-path { -fx-fill: #526159; }
+.sidebar .nav-button { -fx-background-color: transparent; -fx-text-fill: #30483b; -fx-alignment: center-left; -fx-padding: 9 14; -fx-font-weight: normal; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: transparent; -fx-border-width: 0 0 0 4; }
+.sidebar .nav-button .svg-icon-path { -fx-fill: #526159; }
+.sidebar .nav-button:hover { -fx-background-color: #d4dfd8; -fx-text-fill: #173d2c; }
+.sidebar .nav-button:hover .svg-icon-path { -fx-fill: #173d2c; }
+.sidebar .nav-button.active { -fx-background-color: #cee0d6; -fx-text-fill: #173d2c; -fx-font-weight: bold; -fx-border-color: transparent transparent transparent #23584b; -fx-border-width: 0 0 0 4; -fx-background-radius: 0 6 6 0; -fx-border-radius: 0 6 6 0; }
+.sidebar .nav-button.active .svg-icon-path { -fx-fill: #23584b; }
+.sidebar-status-box { -fx-background-color: #eef2ef; -fx-border-color: #cbd4ce; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; }
+.sidebar-status-title { -fx-font-size: 0.85em; -fx-font-weight: bold; -fx-text-fill: #202923; }
+.sidebar-progress { -fx-pref-height: 6; -fx-min-height: 6; -fx-max-height: 6; }
+.sidebar-progress > .track { -fx-background-color: #d5ded8; -fx-background-radius: 999; -fx-background-insets: 0; }
+.sidebar-progress > .bar { -fx-background-color: #23584b; -fx-background-radius: 999; -fx-background-insets: 0; }
+.sidebar .logout-button { -fx-background-color: transparent; -fx-text-fill: #932b2d; -fx-border-color: #d8b2b3; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 12; -fx-font-weight: bold; }
+.sidebar .logout-button .svg-icon-path { -fx-fill: #932b2d; }
+.sidebar .logout-button:hover { -fx-background-color: #f9ecec; -fx-border-color: #c28d8f; }
+.sidebar-action .svg-icon-path { -fx-fill: white; }
 .button, .toggle-button { -fx-background-color: #dce4df; -fx-text-fill: #202923; -fx-padding: 8 12; -fx-background-radius: 4; -fx-border-radius: 4; -fx-border-color: transparent; -fx-cursor: hand; }
 .button:hover, .toggle-button:hover { -fx-background-color: #c8d8ce; }
 .button:armed, .toggle-button:armed { -fx-background-color: #b7cbbc; }

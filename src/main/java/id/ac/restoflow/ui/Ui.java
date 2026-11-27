@@ -45,6 +45,25 @@ public final class Ui {
     public static Label label(String text) { Label l=new Label(text);l.setWrapText(true);return l; }
     public static Label heading(String text) { Label l=label(text);l.getStyleClass().add("page-title");return l; }
     public static Button button(String title,Runnable action) { Button b=new Button(title);b.setOnAction(e->action.run());return b; }
+    public static StackPane icon(String svgPathData) { return icon(svgPathData, 16); }
+    public static StackPane icon(String svgPathData, double size) {
+        javafx.scene.shape.SVGPath path = new javafx.scene.shape.SVGPath();
+        path.setContent(svgPathData);
+        path.getStyleClass().add("svg-icon-path");
+        var bounds = path.getLayoutBounds();
+        double maxDim = Math.max(bounds.getWidth(), bounds.getHeight());
+        if (maxDim > 0) {
+            double scale = size / maxDim;
+            path.setScaleX(scale);
+            path.setScaleY(scale);
+        }
+        StackPane box = new StackPane(new javafx.scene.Group(path));
+        box.getStyleClass().add("svg-icon-box");
+        box.setMinSize(size + 2, size + 2);
+        box.setPrefSize(size + 2, size + 2);
+        box.setMaxSize(size + 2, size + 2);
+        return box;
+    }
     public static void styleDialog(Dialog<?> dialog){dialog.getDialogPane().getStylesheets().add(Ui.class.getResource("/styles/app.css").toExternalForm());}
     public static void error(String message) { Alert a=new Alert(Alert.AlertType.ERROR,message,ButtonType.OK);a.setHeaderText("Tindakan belum berhasil");styleDialog(a);a.showAndWait(); }
     public static boolean confirm(String message) {

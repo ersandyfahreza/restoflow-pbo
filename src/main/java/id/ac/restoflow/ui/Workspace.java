@@ -87,14 +87,62 @@ public final class Workspace {
     public boolean hasUnsavedOrder(){return pos!=null&&!pos.cart.isEmpty();}
     private String role(){return data.path("profile").path("role").asText();}
     private boolean allowed(String... roles){return Arrays.asList(roles).contains(role());}
+    private static final String ICON_BRAND = "M3 14h18v2H3v-2zm2-1c0-3.87 3.13-7 7-7s7 3.13 7 7H5zm6-9h2v2h-2V4z";
+    private static final String ICON_CALENDAR = "M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z";
+    private static final String ICON_REFRESH = "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z";
+    private static final String ICON_LOGOUT = "M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z";
+
+    private static String navIconSvg(String label) {
+        return switch (label) {
+            case "Dashboard" -> "M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z";
+            case "POS" -> "M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2zM7.17 14.75l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 20 4H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.45C4.52 15.37 5.48 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25z";
+            case "Pesanan" -> "M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm5 14H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z";
+            case "Dapur" -> "M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z";
+            case "Menu" -> "M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z";
+            case "Meja" -> "M4 6h16v3H4V6zm2 4h2v9H6v-9zm10 0h2v9h-2v-9zm-7 1h6v2H9v-2z";
+            case "Staf" -> "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z";
+            case "Pengiriman" -> "M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z";
+            case "Ulasan" -> "M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z";
+            case "Laporan" -> "M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z";
+            case "Pengaturan" -> "M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z";
+            default -> "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z";
+        };
+    }
+
+    private void navGroupLabel(VBox target, String title, String... roles) {
+        if (allowed(roles)) {
+            Label l = Ui.label(title);
+            l.getStyleClass().add("nav-group-label");
+            target.getChildren().add(l);
+        }
+    }
+
     private void shell(){
         navButtons.clear();
-        VBox navigation=new VBox(6);navigation.getStyleClass().add("sidebar");navigation.setPrefWidth(235);
+        VBox navigation=new VBox(8);navigation.getStyleClass().add("sidebar");navigation.setPrefWidth(248);
+
+        // Zona 1: Header Brand & Pill Badge Peran
+        StackPane brandIcon=Ui.icon(ICON_BRAND,16);brandIcon.getStyleClass().add("brand-icon-box");
         Label brand=Ui.heading("RestoFlow");brand.getStyleClass().add("brand");
-        Label caption=Ui.label("Rentang data · WIB");caption.getStyleClass().add("sidebar-caption");
+        HBox brandHeader=new HBox(10,brandIcon,brand);
+        brandHeader.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        brandHeader.getStyleClass().add("brand-header");
+
+        Region dot=new Region();dot.getStyleClass().add("role-badge-dot");
+        dot.setMinSize(7,7);dot.setPrefSize(7,7);dot.setMaxSize(7,7);
+        Label roleText=Ui.label("Peran: "+role());roleText.getStyleClass().add("role-badge-text");
+        HBox roleBadge=new HBox(7,dot,roleText);
+        roleBadge.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        roleBadge.getStyleClass().add("role-badge");
+        roleBadge.setMaxWidth(Region.USE_PREF_SIZE);
+
+        // Zona 2: Kartu Filter Rentang Data (Compact Filter Card)
+        Label caption=Ui.label("Rentang Data (WIB)");caption.getStyleClass().addAll("sidebar-caption","sidebar-filter-title");
+        HBox filterHeader=new HBox(6,Ui.icon(ICON_CALENDAR,13),caption);
+        filterHeader.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         from.setAccessibleText("Tanggal mulai rentang data");to.setAccessibleText("Tanggal akhir rentang data");
-        Label fromLabel=Ui.label("Dari");fromLabel.setLabelFor(from);
-        Label toLabel=Ui.label("Sampai");toLabel.setLabelFor(to);
+        Label fromLabel=Ui.label("Dari");fromLabel.setLabelFor(from);fromLabel.getStyleClass().add("sidebar-field-label");
+        Label toLabel=Ui.label("Sampai");toLabel.setLabelFor(to);toLabel.getStyleClass().add("sidebar-field-label");
         Ui.dateFormat(from);Ui.dateFormat(to);
         from.setPrefWidth(200);to.setPrefWidth(200);
         from.setMaxWidth(Double.MAX_VALUE);to.setMaxWidth(Double.MAX_VALUE);
@@ -103,27 +151,60 @@ public final class Workspace {
         Button preset30d=presetButton("30 Hari",30);
         HBox presets=new HBox(4,presetToday,preset7d,preset30d);
         Button applyRange=Ui.button("Terapkan rentang",this::refresh);
+        applyRange.setGraphic(Ui.icon(ICON_REFRESH,14));
+        applyRange.setContentDisplay(ContentDisplay.LEFT);
+        applyRange.setGraphicTextGap(8);
         applyRange.setWrapText(true);
         applyRange.getStyleClass().add("sidebar-action");applyRange.setMaxWidth(Double.MAX_VALUE);
-        navigation.getChildren().addAll(brand,caption,fromLabel,from,toLabel,to,presets,applyRange,autoRefreshToggle,toastLabel,new Separator());
-        nav(navigation,"Dashboard","admin","cashier");nav(navigation,"POS","admin","cashier","waiter");
-        nav(navigation,"Pesanan","admin","cashier","waiter");nav(navigation,"Dapur","kitchen");
-        nav(navigation,"Menu","admin","cashier","waiter");nav(navigation,"Meja","admin","cashier","waiter");
-        nav(navigation,"Staf","admin","cashier");nav(navigation,"Pengiriman","admin","cashier","courier");
-        nav(navigation,"Ulasan","admin","cashier","courier");nav(navigation,"Laporan","admin","cashier");
-        nav(navigation,"Pengaturan","admin");nav(navigation,"Akun","admin","cashier","kitchen","waiter","courier");
+        VBox filterCard=new VBox(6,filterHeader,fromLabel,from,toLabel,to,presets,applyRange,autoRefreshToggle);
+        filterCard.getStyleClass().add("sidebar-filter-card");
+
+        navigation.getChildren().addAll(brandHeader,roleBadge,filterCard,toastLabel);
+
+        // Zona 3: Daftar Navigasi Berikon & Dikelompokkan
+        VBox navList=new VBox(3);navList.getStyleClass().add("nav-list");
+        navGroupLabel(navList,"UTAMA & TRANSAKSI","admin","cashier","waiter","kitchen");
+        nav(navList,"Dashboard","admin","cashier");
+        nav(navList,"POS","admin","cashier","waiter");
+        nav(navList,"Pesanan","admin","cashier","waiter");
+        nav(navList,"Dapur","kitchen");
+
+        navGroupLabel(navList,"OPERASIONAL & KATALOG","admin","cashier","waiter","courier");
+        nav(navList,"Menu","admin","cashier","waiter");
+        nav(navList,"Meja","admin","cashier","waiter");
+        nav(navList,"Pengiriman","admin","cashier","courier");
+
+        navGroupLabel(navList,"MANAJEMEN & SISTEM","admin","cashier","kitchen","waiter","courier");
+        nav(navList,"Staf","admin","cashier");
+        nav(navList,"Ulasan","admin","cashier","courier");
+        nav(navList,"Laporan","admin","cashier");
+        nav(navList,"Akun","admin","cashier","kitchen","waiter","courier");
+        navigation.getChildren().add(navList);
+
+        // Zona 4: Footer Status & Tombol Keluar
         Region spacer=new Region();VBox.setVgrow(spacer,Priority.ALWAYS);
+        int loadedCount=Ui.rows(data,"orders").size();
+        int totalCount=data.path("order_count").asInt();
+        double ratio=totalCount>0?Math.min(1.0,(double)loadedCount/totalCount):1.0;
+        Label loaded=Ui.label(loadedCount+" / "+totalCount+" pesanan dimuat");loaded.getStyleClass().add("sidebar-status-title");
+        ProgressBar progress=new ProgressBar(ratio);progress.getStyleClass().add("sidebar-progress");progress.setMaxWidth(Double.MAX_VALUE);
+        Label updatedLabel=Ui.label("Diperbarui: "+lastUpdatedTime+" WIB");updatedLabel.getStyleClass().add("sidebar-caption");
+        VBox statusBox=new VBox(5,loaded,progress,updatedLabel);statusBox.getStyleClass().add("sidebar-status-box");
+
         Button exit=Ui.button("Keluar",()->{
             if(pos==null||pos.cart.isEmpty()||Ui.confirm("Keranjang belum disimpan. Tetap keluar?")){
                 autoRefreshTimer.stop();
                 logout.run();
             }
-        });exit.getStyleClass().add("logout-button");
-        Label updatedLabel=Ui.label("Diperbarui: "+lastUpdatedTime+" WIB");updatedLabel.getStyleClass().add("sidebar-caption");
-        Label roleLabel=Ui.label("Peran: "+role());roleLabel.getStyleClass().add("sidebar-caption");
-        Label loaded=Ui.label(Ui.rows(data,"orders").size()+" / "+data.path("order_count").asInt()+" pesanan dimuat");loaded.getStyleClass().add("sidebar-caption");
-        navigation.getChildren().addAll(spacer,new Separator(),loaded,updatedLabel,roleLabel,exit);
-        ScrollPane navScroll=Ui.scroll(navigation);navScroll.setPrefWidth(235);navScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);root.setLeft(navScroll);
+        });
+        exit.setGraphic(Ui.icon(ICON_LOGOUT,15));
+        exit.setContentDisplay(ContentDisplay.LEFT);
+        exit.setGraphicTextGap(10);
+        exit.getStyleClass().add("logout-button");
+        exit.setMaxWidth(Double.MAX_VALUE);
+
+        navigation.getChildren().addAll(spacer,statusBox,exit);
+        ScrollPane navScroll=Ui.scroll(navigation);navScroll.setPrefWidth(248);navScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);root.setLeft(navScroll);
         root.setTop(null);root.setBottom(null);
         setZoom(zoomPercent);
     }
@@ -158,7 +239,18 @@ public final class Workspace {
         }
         event.consume();
     }
-    private void nav(VBox target,String label,String... roles){if(allowed(roles)){Button b=Ui.button(label,()->guard(()->show(label)));b.getStyleClass().add("nav-button");b.setMaxWidth(Double.MAX_VALUE);navButtons.put(label,b);target.getChildren().add(b);}}
+    private void nav(VBox target,String label,String... roles){
+        if(allowed(roles)){
+            Button b=Ui.button(label,()->guard(()->show(label)));
+            b.setGraphic(Ui.icon(navIconSvg(label),16));
+            b.setContentDisplay(ContentDisplay.LEFT);
+            b.setGraphicTextGap(12);
+            b.getStyleClass().add("nav-button");
+            b.setMaxWidth(Double.MAX_VALUE);
+            navButtons.put(label,b);
+            target.getChildren().add(b);
+        }
+    }
     private static void guard(Runnable action){try{action.run();}catch(RuntimeException ex){Ui.error(ex.getMessage());}}
     public void refresh(){
         refresh(false);
@@ -197,7 +289,7 @@ public final class Workspace {
             case "Dashboard"->dashboard();case "POS"->pos();case "Pesanan"->orders(false);case "Dapur"->orders(true);
             case "Menu"->menus();case "Meja"->tables();
             case "Staf"->staff();case "Pengiriman"->deliveries();case "Ulasan"->reviews();case "Laporan"->reports();
-            case "Pengaturan"->settings();case "Akun"->account();default->throw new IllegalArgumentException("Halaman tidak dikenal.");};
+            case "Akun"->account();default->throw new IllegalArgumentException("Halaman tidak dikenal.");};
         root.setCenter(content);
     }
     private void mutation(String action,ObjectNode payload,Consumer<JsonNode> after){
@@ -829,14 +921,6 @@ public final class Workspace {
             }));
     }
     private long lineTotal(JsonNode o){long total=0;for(JsonNode i:o.path("items"))total=Math.addExact(total,Math.multiplyExact(i.path("quantity").asLong(),i.path("price").asLong()));return total;}
-    private Node settings(){
-        TextField name=new TextField(data.path("settings").path("display_name").asText());TextArea footer=new TextArea(data.path("settings").path("receipt_footer").asText());footer.setPrefRowCount(3);
-        GridPane fields=Ui.form();Ui.field(fields,0,"Nama restoran",name);Ui.field(fields,1,"Footer nota",footer);
-        VBox p=Ui.page(Ui.heading("Pengaturan Restoran"),
-            fields,
-            Ui.button("Simpan pengaturan",()->guard(()->mutation("settings",Json.object().put("name",required(name)).put("footer",footer.getText()),r->{}))));
-        return Ui.scroll(p);
-    }
     private VBox userAccessSection(){
         Ui.DataTable profiles=new Ui.DataTable(Ui.rows(data,"profiles"),Ui.col("Nama","display_name"),Ui.col("Peran","role"),Ui.col("User UUID","id"),Ui.col("Staf","id_staff"),Ui.col("Pelayan","id_pelayan"),new Ui.Column("Aktif",n->""+n.path("is_active").asBoolean()));
         VBox box=new VBox(12,Ui.heading("Hak akses pengguna"),
@@ -1198,10 +1282,16 @@ public final class Workspace {
     private Node account(){
         Button change = Ui.button("Ganti kata sandi", this::changePassword);
         change.setId("account-change-password");
-        VBox box = Ui.page(Ui.heading("Akun saya"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
+        VBox box = Ui.page(Ui.heading("Akun & Pengaturan"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
             change, Ui.label("Versi 1.0.5 · JavaFX Desktop"));
         if (allowed("admin")) {
-            box.getChildren().addAll(new Separator(), userAccessSection());
+            // ── Pengaturan Restoran (hanya admin) ──────────────────────
+            TextField restoName=new TextField(data.path("settings").path("display_name").asText());
+            TextArea restoFooter=new TextArea(data.path("settings").path("receipt_footer").asText());restoFooter.setPrefRowCount(3);
+            GridPane restoFields=Ui.form();Ui.field(restoFields,0,"Nama restoran",restoName);Ui.field(restoFields,1,"Footer nota",restoFooter);
+            Button saveSettings=Ui.button("Simpan pengaturan",()->guard(()->mutation("settings",Json.object().put("name",required(restoName)).put("footer",restoFooter.getText()),r->{})));
+            VBox settingsSection=new VBox(10,Ui.heading("Pengaturan Restoran"),restoFields,saveSettings);
+            box.getChildren().addAll(new Separator(), settingsSection, new Separator(), userAccessSection());
             return Ui.scroll(box);
         }
         return box;
