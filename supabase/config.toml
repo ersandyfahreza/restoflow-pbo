@@ -1,0 +1,5 @@
+project_id = "restoflow"
+
+[functions.provision-staff-account]
+verify_jwt = false
+entrypoint = "./functions/provision-staff-account/index.js"

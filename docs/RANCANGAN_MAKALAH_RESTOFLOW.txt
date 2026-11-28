@@ -1,0 +1,498 @@
+================================================================================
+RANCANGAN MAKALAH PEMROGRAMAN BERORIENTASI OBJEK (PBO)
+================================================================================
+
+JUDUL MAKALAH:
+RANCANG BANGUN SISTEM MANAJEMEN OPERASIONAL DAN POINT OF SALE RESTORAN
+BERBASIS DESKTOP MENGGUNAKAN PARADIGMA PEMROGRAMAN BERORIENTASI OBJEK
+PADA JAVA 17, JAVAFX, DAN SUPABASE POSTGRESQL (STUDI KASUS: RESTOFLOW)
+
+================================================================================
+1. LATAR BELAKANG DAN PERMASALAHAN
+================================================================================
+
+1.1 Latar Belakang
+Industri kuliner dan restoran menuntut kecepatan, ketepatan, serta koordinasi
+lintas peran yang tinggi mulai dari penerimaan pesanan di kasir atau meja
+pelanggan, penerusan antrean masakan ke dapur, penugasan kurir untuk pesanan
+pengiriman (delivery), pencatatan pembayaran, pencetakan nota, hingga pelaporan
+pendapatan. Dalam operasional sehari-hari, pencatatan manual maupun penggunaan
+perangkat lunak kasir konvensional yang tidak terintegrasi sering memicu
+kesalahan perhitungan tagihan, keterlambatan komunikasi antara pelayan dan staf
+dapur, tumpang tindih penggunaan meja makan, serta ketidakakuratan rekonsiliasi
+laporan keuangan ketika harga menu mengalami perubahan dari waktu ke waktu
+(Soufitri & Purwawijaya, 2022; Muchtar & Darusalam, 2022).
+
+Dari sudut pandang rekayasa perangkat lunak, banyak aplikasi kasir skala kecil
+hingga menengah masih dikembangkan dengan gaya penulisan kode prosedural atau
+monolitik yang mencampurkan logika tampilan antarmuka grafis (GUI), aturan
+bisnis, dan manipulasi basis data secara langsung di dalam satu kelas besar.
+Pendekatan prosedural tersebut menimbulkan tingkat ketergantungan antarkomponen
+yang tinggi (tight coupling) dan kohesi yang rendah (low cohesion). Akibatnya,
+ketika terdapat penambahan metode pembayaran baru, perubahan aturan hak akses
+staf, atau penyesuaian alur status pesanan, pengembang harus memodifikasi banyak
+bagian kode sekaligus yang berisiko merusak fitur yang sudah berjalan (de Sousa
+et al., 2025).
+
+Bahasa pemrograman Java (khususnya Java SE 17 LTS) bersama pustaka antarmuka
+modern JavaFX menyediakan fondasi Pemrograman Berorientasi Objek (Object-
+Oriented Programming / OOP) yang kuat melalui fitur enkapsulasi ketat, kelas
+abstrak tersegel (sealed classes), tipe data imutabel (record), polimorfisme
+antarmuka, serta pengelolaan thread asinkron (Gosling et al., 2021; Eck, 2022).
+Dengan memadukan arsitektur OOP pada klien desktop JavaFX dan basis data awan
+Supabase PostgreSQL yang dilengkapi Row Level Security (RLS), aplikasi desktop
+dapat didistribusikan ke banyak komputer (kasir, dapur, pelayan, kurir, admin)
+secara aman tanpa menyimpan kunci rahasia administrator di sisi klien.
+
+1.2 Rumusan Permasalahan
+Berdasarkan latar belakang tersebut, permasalahan utama yang diselesaikan dalam
+pengembangan aplikasi RestoFlow meliputi:
+a. Bagaimana merancang arsitektur aplikasi desktop manajemen restoran yang
+   memisahkan logika antarmuka (UI), aturan bisnis (Service & Domain), dan akses
+   data (Repository & Integration) menggunakan prinsip OOP pada Java 17?
+b. Bagaimana menerapkan empat pilar OOP (Encapsulation, Abstraction,
+   Inheritance, dan Polymorphism) beserta pola desain (Design Patterns) untuk
+   mencegah kesalahan perhitungan uang, memvalidasi keranjang pesanan, mengatur
+   peran staf, serta membedakan perilaku pembayaran tunai dan non-tunai?
+c. Bagaimana menjaga keamanan akses multi-peran dan integritas transaksi
+   (termasuk pelestarian harga historis transaksi) pada aplikasi desktop yang
+   terhubung ke basis data bersama melalui jaringan HTTPS?
+d. Bagaimana merancang antarmuka pengguna desktop yang responsif (non-blocking)
+   dan efisien untuk pemrosesan transaksi tunggal maupun massal (multi-select)?
+
+
+================================================================================
+2. SOLUSI DAN PENYELESAIAN BERBASIS OOP JAVA
+================================================================================
+
+2.1 Arsitektur Berlapis Berorientasi Objek (Layered OOP Architecture)
+RestoFlow dirancang sebagai aplikasi desktop portabel berbasis Java 17, JavaFX
+17, dan Apache Maven yang dikemas menjadi executable mandiri Windows x64
+menggunakan jpackage. Untuk menghindari pencampuran tanggung jawab (God Object),
+struktur paket Java dibagi ke dalam lima lapisan berorientasi objek yang tegas:
+1. Paket id.ac.restoflow.config      : Enkapsulasi konfigurasi koneksi publik.
+2. Paket id.ac.restoflow.domain      : Model entitas bisnis murni dan aturan
+                                       invarian objek (Cart, Staff, KitchenStaff,
+                                       Courier).
+3. Paket id.ac.restoflow.service     : Logika aturan bisnis dan pola strategi
+                                       (OrderService, PaymentStrategy,
+                                       CashPaymentStrategy, NonCashPaymentStrategy,
+                                       ReceiptService, CsvExport).
+4. Paket id.ac.restoflow.repository  : Abstraksi kontrak akses data
+                                       (RestaurantRepository, SupabaseRepository).
+5. Paket id.ac.restoflow.integration : Transportasi HTTP, autentikasi sesi JWT
+                                       di memori, dan serialisasi JSON
+                                       (SupabaseClient, Json).
+6. Paket id.ac.restoflow.ui          : Komponen antarmuka pengguna modular
+                                       JavaFX (PageView, PosView, TablesView,
+                                       DashboardView, LoginView, Workspace,
+                                       WindowFrame, Ui).
+
+2.2 Penerapan Pilar-Pilar Utama OOP dan Pola Desain pada Java 17
+Penyelesaian masalah rekayasa perangkat lunak pada RestoFlow bertumpu pada
+penerapan prinsip OOP yang nyata sesuai kebutuhan domain restoran (bukan sekadar
+membuat kelas atau antarmuka kosong):
+
+a. Encapsulation (Enkapsulasi) dan Imutabilitas State
+   Seluruh atribut sensitif dan state bisnis dilindungi dengan modifier private
+   dan final. Contohnya, kelas Cart menyembunyikan struktur penyimpanan
+   Map<Integer, Item> agar kode antarmuka tidak dapat memanipulasi kuantitas
+   atau harga secara sembarangan (misalnya memasukkan kuantitas negatif atau
+   melebihi batas 99 porsi). Metode Cart.items() mengembalikan salinan tak dapat
+   diubah melalui List.copyOf(...) sehingga mencegah kebocoran referensi koleksi
+   internal (aliasing bug). Selain itu, perhitungan nilai mata uang Rupiah
+   mengenkapsulasi tipe bilangan bulat 64-bit (long) dengan operasi
+   Math.addExact dan Math.multiplyExact untuk menghilangkan risiko selisih
+   pembulatan floating-point (double/float) sekaligus mendeteksi integer
+   overflow secara instan. Pada lapisan autentikasi, SupabaseClient menyimpan
+   accessToken dan refreshToken murni di memori privat tanpa pernah menulis
+   password atau token sesi ke media penyimpanan lokal.
+
+b. Abstraction (Abstraksi) dan Dependency Inversion
+   RestoFlow memisahkan "apa yang dapat dilakukan sistem" dari "bagaimana cara
+   kerjanya" menggunakan interface Java (Cui, 2024):
+   - RestaurantRepository mendefinisikan kontrak operasi bisnis (snapshot,
+     execute, createStaffAccount, changePassword) sehingga lapisan UI dan
+     Service tidak bergantung langsung pada detail protokol HTTP Supabase. Hal
+     ini memungkinkan pengujian otomatis antarmuka GUI (WorkspaceTest) memakai
+     implementasi repositori tiruan (mock/stub) tanpa menyentuh server produksi.
+   - PageView menyediakan abstraksi seragam bagi setiap modul layar utama
+     (DashboardView, PosView, TablesView) melalui metode tunggal Node node().
+   - Workspace.Async (@FunctionalInterface) mengabstraksikan eksekusi tugas
+     asinkron latar belakang dari mekanisme thread JavaFX.
+
+c. Inheritance (Pewarisan) Terkendali dengan Java 17 Sealed Classes
+   Pewarisan pada RestoFlow diterapkan secara disiplin hanya pada entitas yang
+   benar-benar memiliki hubungan is-a pada skema basis data restoran. Tabel
+   staff memiliki spesialisasi keanggotaan pada tabel staff_kitchen dan kurir,
+   sedangkan tabel pelayan memiliki skema identitas kode string tersendiri.
+   Oleh sebab itu, RestoFlow menggunakan fitur modern Java 17:
+   "public abstract sealed class Staff permits KitchenStaff, Courier"
+   Kata kunci sealed memastikan pada waktu kompilasi (compile-time) bahwa tidak
+   ada kelas liar di luar KitchenStaff dan Courier yang dapat mewarisi Staff
+   (Gosling et al., 2021). Sementara itu, entitas pelayan tetap dikelola secara
+   terpisah tanpa memaksakan pewarisan semu yang melanggar Liskov Substitution
+   Principle (LSP).
+
+d. Polymorphism (Polimorfisme) melalui Template Method dan Strategy Pattern
+   Polimorfisme dimanfaatkan di dua titik krusial dalam aplikasi:
+   1) Template Method pada kelas abstrak Staff: metode final displayLabel()
+      menyusun format tampilan staf dengan memanggil metode abstrak roleLabel().
+      Saat objek bertipe referensi Staff dipanggil di tabel UI, JVM secara
+      dinamis (dynamic dispatch) menjalankan implementasi roleLabel() milik
+      KitchenStaff ("Dapur") atau Courier ("Kurir").
+   2) Strategy Pattern pada proses pembayaran: antarmuka PaymentStrategy
+      diimplementasikan secara polimorfik oleh CashPaymentStrategy dan
+      NonCashPaymentStrategy (untuk Debit dan QRIS). Pada pembayaran tunai,
+      CashPaymentStrategy mengizinkan input nominal bebas di atas tagihan dan
+      menghitung kembalian. Sebaliknya, NonCashPaymentStrategy mengunci input
+      nominal tepat sebesar tagihan, menonaktifkan tombol pecahan tunai cepat,
+      dan menolak nominal yang tidak persis sama dengan tagihan. Dialog
+      pembayaran cukup berinteraksi dengan tipe abstrak PaymentStrategy tanpa
+      percabangan kondisional yang berulang.
+
+e. Composition (Komposisi) dan Java 17 Record
+   RestoFlow mengutamakan komposisi objek (has-a) dibandingkan pewarisan yang
+   berlebihan. Kelas Cart tersusun atas kumpulan objek nilai imutabel Cart.Item
+   yang dideklarasikan sebagai Java 17 record. Begitu pula jendela utama
+   RestoFlowApp merangkai WindowFrame, LoginView, dan Workspace, di mana
+   Workspace merangkai sub-komponen tampilan seperti PosView, TablesView, dan
+   DashboardView. Konfigurasi koneksi publik AppConfig juga dirancang sebagai
+   Java record yang menimpa metode toString() agar nilai kunci API tidak pernah
+   bocor ke dalam log aplikasi.
+
+2.3 Penyelesaian Keamanan dan Integritas Transaksi Basis Data
+Aplikasi desktop tidak aman apabila menyimpan kunci administrator database di
+dalam kode biner klien. RestoFlow menyelesaikan masalah ini dengan arsitektur
+keamanan berlapis di sisi server PostgreSQL/Supabase (The PostgreSQL Global
+Development Group, 2024):
+- Klien desktop hanya memakai Publishable Key dan JWT sesi pengguna yang login.
+- Seluruh 16 tabel mengaktifkan Row Level Security (RLS) sehingga staf dapur,
+  pelayan, kurir, kasir, dan admin hanya dapat membaca baris data sesuai haknya.
+- Seluruh penulisan transaksi (pembuatan pesanan, pembayaran, penugasan kurir,
+  perubahan status) dieksekusi dalam satu fungsi RPC PostgreSQL transaksional
+  atomik (rf_execute) sehingga kegagalan di tengah proses otomatis melakukan
+  rollback tanpa menyisakan data parsial.
+- Pembuatan akun staf baru diproses melalui Edge Function provision-staff-account
+  dan trigger database yang secara atomik dapat membuat identitas staf/pelayan
+  baru sekaligus profil pengguna dan catatan audit.
+
+
+================================================================================
+3. FITUR UTAMA APLIKASI DAN PENJELASAN SOURCE CODE
+================================================================================
+
+3.1 Fitur Utama Aplikasi RestoFlow
+1. Autentikasi Sesi Memori & Manajemen Akun Multi-Peran:
+   Mendukung lima peran pengguna (admin, cashier, kitchen, waiter, courier),
+   fitur ganti kata sandi mandiri tanpa keluar ke browser, serta penambahan akun
+   staf baru yang terintegrasi otomatis dengan pembuatan identitas staf/pelayan
+   maupun penautan staf aktif yang sudah ada.
+2. Point of Sale (POS) dengan Multi-Select & Validasi Meja Real-Time:
+   Pencarian dan penyaringan kategori menu (Makanan/Minuman), fitur klik ganda
+   (double-click) dan Pilih Banyak (multi-select) untuk memasukkan atau mengubah
+   banyak menu sekaligus di keranjang, indikator status meja (Tersedia / Sudah
+   terisi), serta opsi pembatalan penugasan staf dapur/pelayan.
+3. Denah Meja Visual Interaktif & Pintasan Pesanan Aktif:
+   Menampilkan seluruh meja dalam grid visual berkode warna (Hijau = Tersedia,
+   Kuning = Sudah terisi beserta nomor pesanan aktif, Abu-abu = Diarsipkan).
+   Klik pada meja membuka dialog Menu Meja untuk mengedit QR/status meja,
+   membuat pesanan baru, atau langsung memproses pesanan aktif di meja tersebut.
+4. Manajemen Pesanan Fleksibel, Pembayaran Terpadu, & Cetak Nota:
+   Mendukung penyaringan status cepat, sorotan visual tahap pesanan saat ini,
+   perubahan status pesanan secara fleksibel (termasuk koreksi mundur jika ada
+   kesalahan input), konfirmasi pembayaran dengan tombol nominal cepat (Uang
+   pas, Rp50.000, Rp100.000, +Rp10.000, +Rp50.000), serta pratinjau, cetak
+   printer sistem, dan ekspor TXT nota tunggal maupun gabungan.
+5. Kitchen Display & Auto-Refresh Antrean:
+   Layar khusus peran dapur yang mengurutkan antrean aktif dari pesanan terlama,
+   dilengkapi fitur Auto-Refresh berkala (15 detik) yang aman (tidak mengganggu
+   saat pengguna sedang mengetik atau membuka dialog) beserta notifikasi toast.
+6. Manajemen Pengiriman Kurir, Ulasan Pelanggan, & Laporan Rekonsiliasi CSV:
+   Penugasan kurir dengan perhitungan beban aktif, pelacakan waktu diambil dan
+   terkirim, rekapitulasi rating bintang kurir, grafik tren pendapatan
+   (Harian/Mingguan/Bulanan), serta laporan rekonsiliasi selisih harga historis
+   yang aman dari serangan CSV Formula Injection.
+
+3.2 Penjelasan Source Code dan Implementasi OOP Java
+
+A. Pewarisan Tersegel (Sealed Class) dan Polimorfisme pada Hirarki Staf
+   Berkas: src/main/java/id/ac/restoflow/domain/Staff.java,
+           KitchenStaff.java, dan Courier.java
+
+   Cuplikan Kode:
+   ----------------------------------------------------------------------------
+   public abstract sealed class Staff permits KitchenStaff, Courier {
+       private final int id;
+       private final String name;
+       private final boolean active;
+
+       protected Staff(int id, String name, boolean active) {
+           if (id <= 0 || name == null || name.isBlank())
+               throw new IllegalArgumentException("Identitas staf tidak valid.");
+           this.id = id;
+           this.name = name;
+           this.active = active;
+       }
+       public abstract String roleLabel();
+       public final String displayLabel() {
+           return name + " · " + roleLabel() + (active ? "" : " (arsip)");
+       }
+   }
+
+   public final class KitchenStaff extends Staff {
+       public KitchenStaff(int id, String name, boolean active) {
+           super(id, name, active);
+       }
+       @Override public String roleLabel() { return "Dapur"; }
+   }
+
+   public final class Courier extends Staff {
+       public Courier(int id, String name, boolean active) {
+           super(id, name, active);
+       }
+       @Override public String roleLabel() { return "Kurir"; }
+   }
+   ----------------------------------------------------------------------------
+   Penjelasan OOP:
+   - Konstruktor berakses protected pada Staff memvalidasi invarian objek sejak
+     instansiasi (defensive programming) sehingga mustahil ada objek Staff di
+     memori dengan ID <= 0 atau nama kosong.
+   - Seluruh field bersifat private final (enkapsulasi penuh & imutabel).
+   - Metode displayLabel() bertindak sebagai Template Method yang bersifat final
+     agar format label konsisten di seluruh aplikasi, sementara detail nama
+     peran didelegasikan secara polimorfik ke metode abstrak roleLabel() pada
+     masing-masing kelas turunan final (KitchenStaff dan Courier).
+
+B. Enkapsulasi, Komposisi, dan Java Record pada Keranjang Belanja
+   Berkas: src/main/java/id/ac/restoflow/domain/Cart.java
+
+   Cuplikan Kode:
+   ----------------------------------------------------------------------------
+   public final class Cart {
+       public record Item(int menuId, String name, long price, int quantity) {
+           public long subtotal() { return Math.multiplyExact(price, quantity); }
+       }
+       private final Map<Integer, Item> items = new LinkedHashMap<>();
+
+       public void add(int id, String name, long price, int quantity) {
+           if (id <= 0 || name == null || name.isBlank() || price < 0 || price > 1_000_000_000L)
+               throw new IllegalArgumentException("Menu atau harga tidak valid.");
+           int combined = Math.addExact(quantity, items.containsKey(id) ? items.get(id).quantity() : 0);
+           if (quantity <= 0 || combined > 99)
+               throw new IllegalArgumentException("Jumlah per menu harus 1–99.");
+           items.put(id, new Item(id, name, price, combined));
+       }
+       public Collection<Item> items() { return java.util.List.copyOf(items.values()); }
+       public long total() {
+           return items.values().stream().mapToLong(Item::subtotal).reduce(0, Math::addExact);
+       }
+   }
+   ----------------------------------------------------------------------------
+   Penjelasan OOP:
+   - Cart menerapkan prinsip Composition: satu objek Cart mengelola daur hidup
+     banyak objek Cart.Item.
+   - Cart.Item menggunakan fitur Java record yang secara otomatis menghasilkan
+     objek nilai (Value Object) yang imutabel; setiap perubahan kuantitas item
+     mengganti instans record lama dengan instans baru tanpa efek samping state
+     bersama (mutable shared state).
+   - Enkapsulasi Map<Integer, Item> memakai LinkedHashMap untuk mempertahankan
+     urutan penambahan menu oleh kasir, namun diekspos keluar hanya sebagai
+     salinan imutabel melalui List.copyOf(items.values()).
+
+C. Abstraksi dan Polimorfisme Strategy Pattern pada Pembayaran
+   Berkas: src/main/java/id/ac/restoflow/service/PaymentStrategy.java,
+           CashPaymentStrategy.java, dan NonCashPaymentStrategy.java
+
+   Cuplikan Kode:
+   ----------------------------------------------------------------------------
+   public interface PaymentStrategy {
+       String method();
+       boolean allowsCustomAmount();
+       long defaultReceivedAmount(long totalBill);
+       long validateAndCalculateChange(long totalBill, long amountReceived);
+
+       static PaymentStrategy forMethod(String method) {
+           if (method == null) throw new IllegalArgumentException("Pilih metode pembayaran.");
+           return switch (method) {
+               case "Cash" -> new CashPaymentStrategy();
+               case "Debit", "QRIS" -> new NonCashPaymentStrategy(method);
+               default -> throw new IllegalArgumentException("Metode tidak dikenal: " + method);
+           };
+       }
+   }
+   ----------------------------------------------------------------------------
+   Penjelasan OOP:
+   - PaymentStrategy menggabungkan Factory Method statis (forMethod) dengan
+     Behavioral Strategy Pattern (Morandi et al., 2012).
+   - Ketika kasir memilih metode pembayaran di dialog UI (Workspace.java), UI
+     memanggil PaymentStrategy strategy = PaymentStrategy.forMethod(pilihan).
+     Pengaturan aktif/nonaktif kolom input nominal, tombol pecahan uang cepat,
+     serta validasi kembalian dieksekusi secara polimorfik melalui objek
+     strategy tersebut, sehingga mudah diperluas di masa depan (Open/Closed
+     Principle) apabila ditambahkan metode pembayaran baru seperti Voucher.
+
+D. Abstraksi Repository Pattern dan Pengamanan Sesi HTTP
+   Berkas: src/main/java/id/ac/restoflow/repository/RestaurantRepository.java,
+           SupabaseRepository.java, dan integration/SupabaseClient.java
+
+   Cuplikan Kode:
+   ----------------------------------------------------------------------------
+   public interface RestaurantRepository {
+       JsonNode snapshot(LocalDate from, LocalDate to);
+       JsonNode execute(String action, JsonNode payload);
+       JsonNode createStaffAccount(JsonNode profile);
+       void changePassword(String currentPassword, String newPassword);
+   }
+   ----------------------------------------------------------------------------
+   Penjelasan OOP:
+   - Kelas UI (Workspace) hanya mengenal antarmuka RestaurantRepository
+     (Dependency Inversion Principle).
+   - Implementasi konkret SupabaseRepository menerjemahkan pemanggilan bisnis
+     ke endpoint RPC Supabase melalui SupabaseClient.
+   - Di dalam SupabaseClient, metode ber-modifier synchronized menjaga keamanan
+     akses lintas thread (thread-safety) terhadap token sesi, melakukan
+     pembaruan token otomatis (refresh token) sebelum kedaluwarsa, serta
+     menyembunyikan pesan error SQL internal agar tidak membocorkan struktur
+     basis data ke layar pengguna.
+
+E. Modularisasi View Antarmuka dan Observer Pattern di JavaFX
+   Berkas: src/main/java/id/ac/restoflow/ui/PageView.java, PosView.java,
+           TablesView.java, DashboardView.java, Ui.java, dan WindowFrame.java
+
+   Penjelasan OOP:
+   - Antarmuka PageView menyatukan kontrak komponen halaman utama sehingga
+     logika tampilan Denah Meja (TablesView), Kasir (PosView), dan Ringkasan
+     (DashboardView) terenkapsulasi di kelasnya masing-masing.
+   - TablesView menerapkan pola Callback Interface (TablesView.TableCallbacks)
+     untuk berkomunikasi balik dengan Workspace secara longgar (loose coupling)
+     saat pengguna memilih pintasan pesanan aktif dari kotak meja.
+   - Komponen tabel kustom Ui.DataTable membungkus TableView JavaFX beserta
+     logika pencarian real-time, tombol pilih banyak (multi-select), dan klik
+     ganda (Observer/Event-Listener Pattern) ke dalam satu komponen reusable
+     yang dipakai ulang secara konsisten di seluruh modul aplikasi.
+
+
+================================================================================
+4. CHALLENGE & OPPORTUNITY (TANTANGAN DAN PELUANG PENGEMBANGAN)
+================================================================================
+
+4.1 Challenge (Tantangan dalam Pengembangan)
+1. Konkurensi Antara Thread GUI JavaFX dan Permintaan Jaringan:
+   JavaFX menerapkan aturan single-threaded UI model, di mana operasi jaringan
+   sinkron di thread utama akan membekukan seluruh jendela aplikasi (window
+   not responding). Tantangan ini diatasi dengan memisahkan eksekusi HTTP ke
+   dalam single-thread ExecutorService berbasis JavaFX Task melalui abstraksi
+   Workspace.Async, sementara bingkai kustom WindowFrame tetap mempertahankan
+   responsivitas tombol kontrol jendela (minimize, maximize, resize, close)
+   meskipun konten kerja sedang dinonaktifkan menunggu respons server.
+2. Keamanan Aplikasi Klien Desktop Tanpa Kunci Rahasia Server:
+   Berbeda dengan aplikasi web server-side, berkas JAR/EXE desktop berada di
+   perangkat pengguna sehingga berpotensi didekompilasi. Menanamkan service_role
+   key di dalam aplikasi desktop sangat berbahaya. Tantangan ini diselesaikan
+   dengan memvalidasi AppConfig agar menolak kunci administrator sejak di sisi
+   klien, menegakkan kontrol akses di level basis data melalui PostgreSQL RLS,
+   serta memindahkan operasi sensitif pembuatan pengguna baru ke Supabase Edge
+   Function dan trigger database terproteksi.
+3. Pelestarian Data Historis dan Integritas Harga Saat Perubahan Menu:
+   Pada data operasional restoran yang sudah berjalan, perubahan harga satuan
+   menu di kemudian hari tidak boleh mengubah nilai tagihan transaksi masa lalu.
+   Selain itu, data historis sumber memiliki sepuluh transaksi dengan selisih
+   antara total pembayaran dan rincian item. Tantangan ini diselesaikan tanpa
+   memanipulasi data asli, yakni dengan menambahkan kolom snapshot harga
+   (harga_satuan_saat_transaksi) pada transaksi baru serta menampilkan kolom
+   rekonsiliasi selisih secara transparan pada modul Laporan dan Nota.
+4. Pencegahan Duplikasi Transaksi Akibat Gangguan Jaringan (Idempotency):
+   Saat koneksi internet restoran melambat (timeout), kasir cenderung menekan
+   tombol simpan berulang kali. RestoFlow mengatasi tantangan ini dengan
+   menghasilkan UUID requestId unik pada setiap objek sesi keranjang PosView
+   dan menguncinya di sisi PostgreSQL menggunakan pg_advisory_xact_lock,
+   sehingga pengiriman ulang permintaan yang sama dijamin hanya menghasilkan
+   satu pesanan tunggal.
+
+4.2 Opportunity (Peluang Pengembangan Selanjutnya)
+1. Sinkronisasi Event-Driven Penuh dengan WebSocket (Supabase Realtime):
+   Mengembangkan mekanisme Auto-Refresh saat ini menjadi langganan kanal
+   WebSocket real-time penuh sehingga layar Kitchen Display di dapur dan Denah
+   Meja di kasir dapat menerima pembaruan instan dalam hitungan milidetik
+   disertai peringatan suara saat pesanan baru masuk.
+2. Manajemen Stok Harian dan Resep Bahan Baku (Inventory Domain Model):
+   Memperluas lapisan domain OOP dengan entitas StockLedger dan RecipeItem untuk
+   menghitung pengurangan porsi menu atau bahan baku secara otomatis setiap kali
+   pesanan dibuat, serta memberi peringatan dini ketika stok mendekati habis.
+3. Ekspansi Polimorfisme PaymentStrategy ke Payment Gateway QRIS Dinamis:
+   Berkat penerapan Strategy Pattern pada PaymentStrategy, sistem sangat siap
+   diperluas dengan kelas baru DynamicQrisGatewayStrategy yang menghasilkan kode
+   QRIS dinamis per transaksi dan memverifikasi status lunas secara otomatis
+   melalui webhook tanpa mengubah struktur antarmuka kasir utama.
+4. Ekosistem Pemesanan Mandiri Pelanggan (Self-Ordering via QR Meja) & Thermal
+   POS Printing:
+   Memanfaatkan identitas qr_meja yang sudah tersimpan pada basis data Supabase
+   yang sama untuk dihubungkan dengan antarmuka web ringan bagi pelanggan di
+   meja, serta menambahkan modul pencetakan langsung ke printer kasir thermal
+   58mm/80mm berbasis protokol ESC/POS.
+
+
+================================================================================
+5. DAFTAR PUSTAKA (TERVERIFIKASI DAPAT DIAKSES DAN DIUNDUH DALAM FORMAT PDF)
+================================================================================
+
+Seluruh referensi ilmiah, buku teks akademik, dan spesifikasi teknis resmi di
+bawah ini bersifat akses terbuka (Open Access), dapat diakses langsung melalui
+peramban web, dan memiliki tautan unduh berkas PDF aktif:
+
+[1] Cui, J. (2024). Software Design Pattern Model and Data Structure Algorithm
+    Abilities on Microservices Architecture Design in High-tech Enterprises.
+    arXiv Preprint, arXiv:2411.04143.
+    - Halaman Akses : https://arxiv.org/abs/2411.04143
+    - Tautan Unduh  : https://arxiv.org/pdf/2411.04143
+
+[2] de Sousa, B. M. D., Ferreira, R. C., & Goldman, A. (2025). Functional vs.
+    Object-Oriented: Comparing How Programming Paradigms Affect the
+    Architectural Characteristics of Systems. arXiv Preprint, arXiv:2508.00244.
+    - Halaman Akses : https://arxiv.org/abs/2508.00244
+    - Tautan Unduh  : https://arxiv.org/pdf/2508.00244
+
+[3] Eck, D. J. (2022). Introduction to Programming Using Java, Version 9.0
+    (JavaFX Edition). Geneva, NY: Hobart and William Smith Colleges.
+    - Halaman Akses : https://math.hws.edu/javanotes/
+    - Tautan Unduh  : https://math.hws.edu/eck/cs124/downloads/javanotes9-linked.pdf
+
+[4] Firmansyah, A., Wahyudin, M. I., & Rahman, B. (2021). Penerapan Metode Data
+    Mining Pada Point of Sale Berbasis Web Menggunakan Algoritma Apriori. Jurnal
+    Media Informatika Budidarma, 5(3), 1072-1079.
+    DOI: 10.30865/mib.v5i3.3085.
+    - Halaman Akses : https://ejurnal.stmik-budidarma.ac.id/index.php/mib/article/view/3085
+    - Tautan Unduh  : https://ejurnal.stmik-budidarma.ac.id/index.php/mib/article/download/3085/2182
+
+[5] Gosling, J., Joy, B., Steele, G., Bracha, G., Buckley, A., Smith, D., &
+    Bierman, G. (2021). The Java Language Specification, Java SE 17 Edition.
+    Redwood City, CA: Oracle America, Inc.
+    - Halaman Akses : https://docs.oracle.com/javase/specs/jls/se17/html/index.html
+    - Tautan Unduh  : https://docs.oracle.com/javase/specs/jls/se17/jls17.pdf
+
+[6] Morandi, B., West, S., Nanz, S., & Gomaa, H. (2012). Concurrent Object-
+    Oriented Development with Behavioral Design Patterns. arXiv Preprint,
+    arXiv:1212.5491.
+    - Halaman Akses : https://arxiv.org/abs/1212.5491
+    - Tautan Unduh  : https://arxiv.org/pdf/1212.5491
+
+[7] Muchtar, F. S. P., & Darusalam, U. (2022). Penerapan Metode Pencatatan
+    Perpetual Pada Sistem Informasi Kasir Penjualan dan Pencatatan Barang.
+    Jurnal Media Informatika Budidarma, 6(1), 406-415.
+    DOI: 10.30865/mib.v6i1.3518.
+    - Halaman Akses : https://ejurnal.stmik-budidarma.ac.id/index.php/mib/article/view/3518
+    - Tautan Unduh  : https://ejurnal.stmik-budidarma.ac.id/index.php/mib/article/download/3518/2469
+
+[8] Soufitri, F., & Purwawijaya, E. (2022). Analisis Kualitas Rancangan Point
+    of Sale Menerapkan Metode Mean Squared Error. Jurnal Media Informatika
+    Budidarma, 6(4), 2171-2180. DOI: 10.30865/mib.v6i4.4767.
+    - Halaman Akses : https://ejurnal.stmik-budidarma.ac.id/index.php/mib/article/view/4767
+    - Tautan Unduh  : https://ejurnal.stmik-budidarma.ac.id/index.php/mib/article/download/4767/3027
+
+[9] The PostgreSQL Global Development Group. (2024). PostgreSQL 17 Official
+    Documentation (Row Security Policies & Server Programming). PostgreSQL
+    Global Development Group.
+    - Halaman Akses : https://www.postgresql.org/docs/17/index.html
+    - Tautan Unduh  : https://www.postgresql.org/files/documentation/pdf/17/postgresql-17-A4.pdf
+================================================================================

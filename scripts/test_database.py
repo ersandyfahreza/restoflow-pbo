@@ -72,9 +72,12 @@ def main():
                 return query(db,source,ok)
             sql("""
               DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon; END IF;
-              IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated; END IF; END $$;
+              IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated; END IF;
+              IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='supabase_auth_admin') THEN CREATE ROLE supabase_auth_admin; END IF; END $$;
               CREATE SCHEMA auth;
-              CREATE TABLE auth.users(id uuid PRIMARY KEY);
+              CREATE TABLE auth.users(id uuid PRIMARY KEY, raw_app_meta_data jsonb, raw_user_meta_data jsonb);
+              GRANT USAGE ON SCHEMA auth TO supabase_auth_admin;
+              GRANT ALL ON TABLE auth.users TO supabase_auth_admin;
               CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
               GRANT USAGE ON SCHEMA auth,public TO authenticated,anon;
               GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated,anon;
@@ -102,13 +105,33 @@ def main():
             check('715 original rows preserved',total_rows==715)
             check('read-only verification script executes',sql((ROOT/'supabase/verify.sql').read_text(encoding='utf-8')).returncode==0)
             u={name:f'00000000-0000-0000-0000-{i:012d}' for i,name in enumerate(['admin','cashier','kitchen','waiter','courier','other_courier'],1)}
-            for user_id in u.values():sql(f"INSERT INTO auth.users VALUES('{user_id}');")
+            for user_id in u.values():sql(f"INSERT INTO auth.users(id) VALUES('{user_id}');")
             sql(f"""INSERT INTO profiles(id,display_name,role,id_staff,id_pelayan) VALUES
               ('{u['admin']}','Admin','admin',NULL,NULL),('{u['cashier']}','Cashier','cashier',NULL,NULL),
               ('{u['kitchen']}','Kitchen','kitchen',1,NULL),('{u['waiter']}','Waiter','waiter',NULL,'PLY-01'),
               ('{u['courier']}','Courier','courier',6,NULL),('{u['other_courier']}','Other','courier',7,NULL);""")
             def actor(user, query, ok=True):
                 return sql(f"SET ROLE authenticated;SET \"request.jwt.claim.sub\"='{u[user]}';{query};",ok)
+            new_id='10000000-0000-0000-0000-000000000001'
+            rejected_id='10000000-0000-0000-0000-000000000002'
+            profile={'actor':u['admin'],'name':'Dapur Uji','role':'kitchen','staff_id':2}
+            def metadata(profile):
+                return "'"+json.dumps({'restoflow_staff_account':profile})+"'::jsonb"
+            preflight=f"SELECT rf_check_staff_account('{json.dumps(profile)}'::jsonb)"
+            check('active admin can validate account',actor('admin',preflight).stdout.strip()=='t')
+            check('non-admin cannot validate account even with a supplied admin ID',actor('cashier',preflight,False).returncode!=0)
+            check('anonymous cannot validate account',sql(f'SET ROLE anon;{preflight}',False).returncode!=0)
+            check('user-editable metadata cannot grant access',sql(f"INSERT INTO auth.users(id,raw_user_meta_data) VALUES('{new_id}',{metadata(profile)});SELECT count(*) FROM profiles WHERE id='{new_id}'").stdout.strip()=='0')
+            sql(f"SET ROLE supabase_auth_admin;UPDATE auth.users SET raw_app_meta_data={metadata(profile)} WHERE id='{new_id}';RESET ROLE;")
+            check('trusted Auth metadata creates kitchen profile and audit together',sql(f"SELECT role||':'||id_staff FROM profiles WHERE id='{new_id}'").stdout.strip()=='kitchen:2' and sql(f"SELECT action FROM audit_log WHERE entity_id='{new_id}'").stdout.strip()=='create_staff_account')
+            check('unchanged Auth marker does not recreate profile',sql(f"SET ROLE supabase_auth_admin;UPDATE auth.users SET raw_app_meta_data=raw_app_meta_data||'{{\"provider\":\"email\"}}'::jsonb WHERE id='{new_id}';RESET ROLE;SELECT count(*) FROM audit_log WHERE entity_id='{new_id}'").stdout.strip()=='1')
+            new_staff_user='10000000-0000-0000-0000-000000000003'
+            auto_profile={'actor':u['admin'],'name':'Dhanu Pratama','role':'kitchen','create_identity':True}
+            check('active admin can validate auto-created staff identity',actor('admin',f"SELECT rf_check_staff_account('{json.dumps(auto_profile)}'::jsonb)").stdout.strip()=='t')
+            sql(f"SET ROLE supabase_auth_admin;INSERT INTO auth.users(id,raw_app_meta_data) VALUES('{new_staff_user}',{metadata(auto_profile)});RESET ROLE;")
+            check('auto-created staff identity creates staff, subtype and profile',sql(f"SELECT s.nama_staff||':'||p.role FROM profiles p JOIN staff s USING(id_staff) JOIN staff_kitchen k USING(id_staff) WHERE p.id='{new_staff_user}'").stdout.strip()=='Dhanu Pratama:kitchen')
+            for rejected in (profile,dict(profile,staff_id=6),dict(profile,actor=u['cashier'])):
+                check('invalid provisioning rolls back Auth user and profile',sql(f"BEGIN;INSERT INTO auth.users(id) VALUES('{rejected_id}');UPDATE auth.users SET raw_app_meta_data={metadata(rejected)} WHERE id='{rejected_id}';COMMIT;",False).returncode!=0 and sql(f"SELECT count(*) FROM auth.users WHERE id='{rejected_id}'").stdout.strip()=='0')
             def rpc(user,action,payload,ok=True):
                 body=json.dumps(payload).replace("'","''")
                 out=actor(user,f"SELECT rf_execute('{action}','{body}'::jsonb)",ok)

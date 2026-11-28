@@ -16,4 +16,10 @@ public final class SupabaseRepository implements RestaurantRepository {
     public JsonNode execute(String action, JsonNode payload) {
         return client.rpc("rf_execute", Json.object().put("p_action", action).set("p", payload));
     }
+    public JsonNode createStaffAccount(JsonNode profile) {
+        return client.createStaffAccount(profile);
+    }
+    public void changePassword(String currentPassword, String newPassword) {
+        client.changePassword(currentPassword, newPassword);
+    }
 }

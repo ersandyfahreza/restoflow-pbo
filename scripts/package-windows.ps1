@@ -1,3 +1,5 @@
+param([string]$RuntimeImage, [string]$OutputDirectory)
+
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
@@ -5,9 +7,14 @@ try {
     $projectPom = [xml](Get-Content -LiteralPath 'pom.xml' -Raw)
     $appVersion = [string]$projectPom.project.version
     if ($appVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Versi aplikasi harus angka major.minor.patch.' }
-    $destination = "dist/$appVersion"
+    $destination = if ($OutputDirectory) { $OutputDirectory } else { "dist/$appVersion" }
     $packageRoot = "$destination/RestoFlow"
     if (Test-Path -LiteralPath $packageRoot) { throw "$packageRoot sudah ada. Pindahkan paket lama sebelum membuat paket baru." }
+    $runtimeOptions = @()
+    if ($RuntimeImage) {
+        $runtimePath = (Resolve-Path -LiteralPath $RuntimeImage).Path
+        $runtimeOptions = @('--runtime-image', $runtimePath)
+    }
     & "$PSScriptRoot/maven.ps1" clean verify
     $moduleDir = Join-Path $projectRoot 'target/package-input/javafx'
     New-Item -ItemType Directory -Path $moduleDir -Force | Out-Null
@@ -17,7 +24,7 @@ try {
     & jpackage --type app-image --name RestoFlow --app-version $appVersion `
         --input target/package-input --main-jar "restoflow-$appVersion.jar" `
         --java-options '--module-path=$APPDIR/javafx' --java-options '--add-modules=javafx.controls' `
-        --main-class id.ac.restoflow.Launcher --dest $destination --vendor 'RestoFlow'
+        --main-class id.ac.restoflow.Launcher --dest $destination --vendor 'RestoFlow' @runtimeOptions
     if ($LASTEXITCODE -ne 0) { throw "jpackage gagal, exit code $LASTEXITCODE." }
     Copy-Item -LiteralPath 'docs/SUPABASE_SETUP.md' -Destination "$packageRoot/SUPABASE_SETUP.md"
     Copy-Item -LiteralPath 'supabase/migrations' -Destination "$packageRoot/database" -Recurse

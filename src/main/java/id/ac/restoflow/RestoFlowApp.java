@@ -41,13 +41,14 @@ public final class RestoFlowApp extends Application {
         showLogin();stage.show();
         if(getParameters().getRaw().contains("--smoke-test")) {
             root.applyCss();root.layout();
-            if(scene.lookup("#login-title")==null)throw new IllegalStateException("Layar login tidak terbentuk.");
+            if(scene.lookup("#login-title")==null||scene.lookup("#login-recovery")!=null)throw new IllegalStateException("Layar login tidak sesuai.");
             System.out.println("UI_SMOKE_OK");
             var close=new javafx.animation.PauseTransition(javafx.util.Duration.seconds(2));close.setOnFinished(e->Platform.exit());close.play();
         }
     }
     private void showLogin() {
         workspace=null;root.setTop(null);root.setLeft(null);root.setBottom(null);
+        if(frame!=null)frame.setSubtitle("Manajemen restoran");
         root.setCenter(new LoginView(config.isConfigured(),(emailValue,secret)->{
             if(!config.isConfigured()){Ui.error("Atur koneksi Supabase terlebih dahulu.");return;}
             SupabaseClient candidate=new SupabaseClient(config);
@@ -56,6 +57,9 @@ public final class RestoFlowApp extends Application {
                 catch(RuntimeException ex){candidate.clearSession();throw ex;}
             },data->{
                 client=candidate;
+                String userName=data.path("profile").path("display_name").asText("");
+                String userRole=data.path("profile").path("role").asText("");
+                if(frame!=null&&!userName.isBlank())frame.setSubtitle("Manajemen restoran · "+userName+" ("+userRole+")");
                 workspace=new Workspace(stage,new SupabaseRepository(client),this::background,this::logout,data);
                 root.setCenter(workspace.node());
             });
