@@ -1283,7 +1283,7 @@ public final class Workspace {
         Button change = Ui.button("Ganti kata sandi", this::changePassword);
         change.setId("account-change-password");
         VBox box = Ui.page(Ui.heading("Akun & Pengaturan"),Ui.label("Nama: "+data.path("profile").path("display_name").asText()),Ui.label("Peran: "+role()),Ui.label("UUID: "+data.path("profile").path("id").asText()),
-            change, Ui.label("Versi 1.0.5 · JavaFX Desktop"));
+            change, Ui.label("Versi 1.0.6 · JavaFX Desktop"));
         if (allowed("admin")) {
             // ── Pengaturan Restoran (hanya admin) ──────────────────────
             TextField restoName=new TextField(data.path("settings").path("display_name").asText());

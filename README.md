@@ -1,4 +1,4 @@
-# RestoFlow Desktop 1.0.5
+# RestoFlow Desktop 1.0.6
 
 Aplikasi JavaFX desktop untuk manajemen restoran: login, dashboard, menu, meja, POS,
 antrean dapur, pembayaran manual, nota/cetak, staf, pengiriman, ulasan, laporan CSV,
@@ -14,7 +14,7 @@ Source versi rilis tersedia pada tag v1.0.3; password dan konfigurasi pribadi ti
 Di folder paket, jalankan `RestoFlow.exe`. Seluruh folder RestoFlow harus tetap bersama.
 Runtime Java disertakan, sehingga penerima paket tidak perlu memasang JDK.
 Paket ini aplikasi portabel, bukan installer wizard. Paket lama 0.1.0 di `dist/RestoFlow`
-adalah fondasi sebelumnya. Gunakan versi dalam `dist/1.0.5` untuk fitur tambah akun dan ganti kata sandi.
+adalah fondasi sebelumnya. Gunakan versi dalam `dist/1.0.6` untuk fitur tambah akun dan ganti kata sandi.
 
 Pada pembukaan pertama pilih **Atur koneksi database**, masukkan Project URL HTTPS dan
 publishable key dari proyek Supabase, lalu masuk memakai akun yang memiliki profil.
@@ -47,7 +47,7 @@ Jika unduhan gagal, periksa koneksi/proxy dan pesan error lengkap.
 
 `verify` mengompilasi kode, menjalankan tes termasuk render JavaFX dan HTTP loopback,
 lalu menyiapkan JAR/dependency. Pengemasan menjalankan clean verify dan jpackage.
-Hasil executable: `dist/1.0.5/RestoFlow/RestoFlow.exe`.
+Hasil executable: `dist/1.0.6/RestoFlow/RestoFlow.exe`.
 Jika tujuan sudah ada, pindahkan paket lama dahulu; skrip tidak menimpanya otomatis.
 Jangan menjalankan JAR tunggal tanpa dependency. Kemas/bagikan seluruh folder aplikasi.
 
